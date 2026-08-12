@@ -1,0 +1,107 @@
+{
+  "name": "Notification",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "title": "Title"
+    },
+    "description": {
+      "type": "string",
+      "title": "Description"
+    },
+    "severity": {
+      "type": "string",
+      "title": "Severity",
+      "enum": [
+        "critical",
+        "pending",
+        "upcoming"
+      ],
+      "default": "pending"
+    },
+    "category": {
+      "type": "string",
+      "title": "Category",
+      "enum": [
+        "health",
+        "finance",
+        "investment",
+        "travel",
+        "family",
+        "vault"
+      ],
+      "default": "family"
+    },
+    "due_date": {
+      "type": "string",
+      "title": "Due Date",
+      "format": "date-time"
+    },
+    "status": {
+      "type": "string",
+      "title": "Status",
+      "enum": [
+        "active",
+        "completed",
+        "snoozed"
+      ],
+      "default": "active"
+    },
+    "target_path": {
+      "type": "string",
+      "title": "Target Path"
+    },
+    "amount": {
+      "type": "string",
+      "title": "Amount"
+    }
+  },
+  "required": [
+    "title",
+    "severity",
+    "category",
+    "status"
+  ],
+  "rls": {
+    "read": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

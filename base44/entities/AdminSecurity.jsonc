@@ -1,0 +1,55 @@
+{
+  "name": "AdminSecurity",
+  "type": "object",
+  "properties": {
+    "password_hash": {
+      "type": "string",
+      "title": "Password Hash"
+    },
+    "password_salt": {
+      "type": "string",
+      "title": "Password Salt"
+    },
+    "must_change_password": {
+      "type": "boolean",
+      "title": "Must Change Password",
+      "default": true
+    },
+    "mfa_enforced": {
+      "type": "boolean",
+      "title": "MFA Enforced",
+      "default": false
+    },
+    "last_changed_at": {
+      "type": "string",
+      "title": "Last Changed At",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "must_change_password",
+    "mfa_enforced"
+  ],
+  "rls": {
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

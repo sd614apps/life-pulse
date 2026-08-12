@@ -1,0 +1,75 @@
+{
+  "name": "Transaction",
+  "type": "object",
+  "properties": {
+    "description": {
+      "type": "string",
+      "title": "Description"
+    },
+    "amount": {
+      "type": "number",
+      "title": "Amount"
+    },
+    "category": {
+      "type": "string",
+      "title": "Category",
+      "enum": [
+        "housing",
+        "groceries",
+        "utilities",
+        "entertainment",
+        "healthcare",
+        "income",
+        "other"
+      ],
+      "default": "other"
+    },
+    "type": {
+      "type": "string",
+      "title": "Type",
+      "enum": [
+        "income",
+        "expense"
+      ],
+      "default": "expense"
+    },
+    "family_member": {
+      "type": "string",
+      "title": "Family Member"
+    },
+    "date": {
+      "type": "string",
+      "title": "Date",
+      "format": "date"
+    },
+    "notes": {
+      "type": "string",
+      "title": "Notes"
+    },
+    "family_id": {
+      "type": "string",
+      "title": "Family Id"
+    }
+  },
+  "required": [
+    "description",
+    "amount",
+    "category",
+    "type",
+    "date"
+  ],
+  "rls": {
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

@@ -1,0 +1,68 @@
+{
+  "name": "AuditLog",
+  "type": "object",
+  "properties": {
+    "event_type": {
+      "type": "string",
+      "title": "Event Type",
+      "enum": [
+        "decryption",
+        "login",
+        "mfa",
+        "reset",
+        "toggle",
+        "access",
+        "password_change"
+      ],
+      "default": "access"
+    },
+    "message": {
+      "type": "string",
+      "title": "Message"
+    },
+    "actor": {
+      "type": "string",
+      "title": "Actor"
+    },
+    "severity": {
+      "type": "string",
+      "title": "Severity",
+      "enum": [
+        "info",
+        "warning",
+        "critical"
+      ],
+      "default": "info"
+    },
+    "metadata": {
+      "type": "string",
+      "title": "Metadata"
+    }
+  },
+  "required": [
+    "event_type",
+    "message"
+  ],
+  "rls": {
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

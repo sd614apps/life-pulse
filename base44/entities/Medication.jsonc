@@ -1,0 +1,69 @@
+{
+  "name": "Medication",
+  "type": "object",
+  "properties": {
+    "member_name": {
+      "type": "string",
+      "title": "Member Name"
+    },
+    "medication_name": {
+      "type": "string",
+      "title": "Medication Name"
+    },
+    "dose": {
+      "type": "string",
+      "title": "Dose"
+    },
+    "timing": {
+      "type": "string",
+      "title": "Timing",
+      "enum": [
+        "morning",
+        "noon",
+        "night"
+      ],
+      "default": "morning"
+    },
+    "schedule_time": {
+      "type": "string",
+      "title": "Schedule Time"
+    },
+    "instructions": {
+      "type": "string",
+      "title": "Instructions"
+    },
+    "pill_color": {
+      "type": "string",
+      "title": "Pill Color"
+    },
+    "taken": {
+      "type": "boolean",
+      "title": "Taken",
+      "default": false
+    },
+    "family_id": {
+      "type": "string",
+      "title": "Family Id"
+    }
+  },
+  "required": [
+    "member_name",
+    "medication_name",
+    "dose",
+    "timing"
+  ],
+  "rls": {
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

@@ -1,0 +1,67 @@
+{
+  "name": "CalendarEvent",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "title": "Title"
+    },
+    "event_at": {
+      "type": "string",
+      "title": "Event At",
+      "format": "date-time"
+    },
+    "duration_minutes": {
+      "type": "number",
+      "title": "Duration Minutes",
+      "default": 60
+    },
+    "category": {
+      "type": "string",
+      "title": "Category",
+      "enum": [
+        "family",
+        "health",
+        "school",
+        "work",
+        "travel"
+      ],
+      "default": "family"
+    },
+    "location": {
+      "type": "string",
+      "title": "Location"
+    },
+    "attendees": {
+      "type": "string",
+      "title": "Attendees"
+    },
+    "created_by": {
+      "type": "string",
+      "title": "Created By"
+    },
+    "family_id": {
+      "type": "string",
+      "title": "Family Id"
+    }
+  },
+  "required": [
+    "title",
+    "event_at",
+    "category"
+  ],
+  "rls": {
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

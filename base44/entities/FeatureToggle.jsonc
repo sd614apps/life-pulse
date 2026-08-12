@@ -1,0 +1,63 @@
+{
+  "name": "FeatureToggle",
+  "type": "object",
+  "properties": {
+    "feature_key": {
+      "type": "string",
+      "title": "Feature Key"
+    },
+    "display_name": {
+      "type": "string",
+      "title": "Display Name"
+    },
+    "description": {
+      "type": "string",
+      "title": "Description"
+    },
+    "is_enabled": {
+      "type": "boolean",
+      "title": "Is Enabled",
+      "default": true
+    },
+    "module_path": {
+      "type": "string",
+      "title": "Module Path"
+    }
+  },
+  "required": [
+    "feature_key",
+    "display_name",
+    "is_enabled"
+  ],
+  "rls": {
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "user"
+          }
+        }
+      ]
+    },
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

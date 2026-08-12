@@ -1,0 +1,56 @@
+{
+  "name": "EmergencyContact",
+  "type": "object",
+  "properties": {
+    "label": {
+      "type": "string",
+      "title": "Label"
+    },
+    "contact_name": {
+      "type": "string",
+      "title": "Contact name"
+    },
+    "phone": {
+      "type": "string",
+      "title": "Phone"
+    },
+    "kind": {
+      "type": "string",
+      "title": "Kind",
+      "enum": [
+        "services",
+        "doctor",
+        "family",
+        "ice"
+      ],
+      "default": "family"
+    },
+    "info": {
+      "type": "string",
+      "title": "Info"
+    },
+    "family_id": {
+      "type": "string",
+      "title": "Family Id"
+    }
+  },
+  "required": [
+    "label",
+    "phone",
+    "kind"
+  ],
+  "rls": {
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

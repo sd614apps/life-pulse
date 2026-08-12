@@ -1,0 +1,71 @@
+{
+  "name": "TripEvent",
+  "type": "object",
+  "properties": {
+    "trip_id": {
+      "type": "string",
+      "title": "Trip Id"
+    },
+    "title": {
+      "type": "string",
+      "title": "Title"
+    },
+    "type": {
+      "type": "string",
+      "title": "Type",
+      "enum": [
+        "flight",
+        "hotel",
+        "activity",
+        "transport",
+        "other"
+      ],
+      "default": "activity"
+    },
+    "event_date": {
+      "type": "string",
+      "title": "Event Date",
+      "format": "date"
+    },
+    "event_time": {
+      "type": "string",
+      "title": "Event Time"
+    },
+    "location": {
+      "type": "string",
+      "title": "Location"
+    },
+    "details": {
+      "type": "string",
+      "title": "Details"
+    },
+    "confirmation_code": {
+      "type": "string",
+      "title": "Confirmation Code"
+    },
+    "family_id": {
+      "type": "string",
+      "title": "Family Id"
+    }
+  },
+  "required": [
+    "trip_id",
+    "title",
+    "type",
+    "event_date"
+  ],
+  "rls": {
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

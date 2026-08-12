@@ -1,0 +1,70 @@
+{
+  "name": "AppConfiguration",
+  "type": "object",
+  "properties": {
+    "config_key": {
+      "type": "string",
+      "title": "Config Key"
+    },
+    "config_value": {
+      "type": "string",
+      "title": "Config Value"
+    },
+    "category": {
+      "type": "string",
+      "title": "Category",
+      "enum": [
+        "security",
+        "accessibility",
+        "privacy",
+        "general"
+      ],
+      "default": "general"
+    },
+    "description": {
+      "type": "string",
+      "title": "Description"
+    },
+    "is_default": {
+      "type": "boolean",
+      "title": "Is Default",
+      "default": true
+    }
+  },
+  "required": [
+    "config_key",
+    "config_value",
+    "category"
+  ],
+  "rls": {
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "user"
+          }
+        }
+      ]
+    },
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

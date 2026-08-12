@@ -1,0 +1,42 @@
+{
+  "name": "PackingItem",
+  "type": "object",
+  "properties": {
+    "trip_id": {
+      "type": "string",
+      "title": "Trip Id"
+    },
+    "item": {
+      "type": "string",
+      "title": "Item"
+    },
+    "packed": {
+      "type": "boolean",
+      "title": "Packed",
+      "default": false
+    },
+    "family_id": {
+      "type": "string",
+      "title": "Family Id"
+    }
+  },
+  "required": [
+    "trip_id",
+    "item",
+    "packed"
+  ],
+  "rls": {
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

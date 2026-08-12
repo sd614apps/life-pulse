@@ -1,0 +1,68 @@
+{
+  "name": "VaultItem",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "title": "Title"
+    },
+    "category": {
+      "type": "string",
+      "title": "Category",
+      "enum": [
+        "insurance",
+        "medical",
+        "property",
+        "id",
+        "legal"
+      ],
+      "default": "legal"
+    },
+    "file_url": {
+      "type": "string",
+      "title": "File Url"
+    },
+    "uploaded_at": {
+      "type": "string",
+      "title": "Uploaded At",
+      "format": "date"
+    },
+    "expires_at": {
+      "type": "string",
+      "title": "Expires At",
+      "format": "date"
+    },
+    "encrypted": {
+      "type": "boolean",
+      "title": "Encrypted",
+      "default": true
+    },
+    "size_label": {
+      "type": "string",
+      "title": "Size Label"
+    },
+    "family_id": {
+      "type": "string",
+      "title": "Family Id"
+    }
+  },
+  "required": [
+    "title",
+    "category",
+    "uploaded_at"
+  ],
+  "rls": {
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

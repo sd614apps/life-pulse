@@ -1,0 +1,64 @@
+{
+  "name": "MedicalRecord",
+  "type": "object",
+  "properties": {
+    "member_name": {
+      "type": "string",
+      "title": "Member Name"
+    },
+    "record_type": {
+      "type": "string",
+      "title": "Record Type",
+      "enum": [
+        "lab_report",
+        "imaging",
+        "prescription",
+        "immunization",
+        "allergy",
+        "condition"
+      ],
+      "default": "lab_report"
+    },
+    "title": {
+      "type": "string",
+      "title": "Title"
+    },
+    "date": {
+      "type": "string",
+      "title": "Date",
+      "format": "date"
+    },
+    "provider": {
+      "type": "string",
+      "title": "Provider"
+    },
+    "summary": {
+      "type": "string",
+      "title": "Summary"
+    },
+    "family_id": {
+      "type": "string",
+      "title": "Family Id"
+    }
+  },
+  "required": [
+    "member_name",
+    "record_type",
+    "title",
+    "date"
+  ],
+  "rls": {
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

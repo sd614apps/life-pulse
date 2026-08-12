@@ -1,0 +1,70 @@
+{
+  "name": "Holding",
+  "type": "object",
+  "properties": {
+    "asset_name": {
+      "type": "string",
+      "title": "Asset Name"
+    },
+    "asset_class": {
+      "type": "string",
+      "title": "Asset Class",
+      "enum": [
+        "stocks_etfs",
+        "real_estate",
+        "crypto",
+        "retirement",
+        "cash"
+      ],
+      "default": "stocks_etfs"
+    },
+    "balance": {
+      "type": "number",
+      "title": "Balance"
+    },
+    "daily_change_amount": {
+      "type": "number",
+      "title": "Daily Change Amount",
+      "default": 0
+    },
+    "daily_change_pct": {
+      "type": "number",
+      "title": "Daily Change Pct",
+      "default": 0
+    },
+    "risk_level": {
+      "type": "string",
+      "title": "Risk Level",
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "default": "medium"
+    },
+    "family_id": {
+      "type": "string",
+      "title": "Family Id"
+    }
+  },
+  "required": [
+    "asset_name",
+    "asset_class",
+    "balance",
+    "risk_level"
+  ],
+  "rls": {
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

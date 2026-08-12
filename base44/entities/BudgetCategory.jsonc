@@ -1,0 +1,59 @@
+{
+  "name": "BudgetCategory",
+  "type": "object",
+  "properties": {
+    "category": {
+      "type": "string",
+      "title": "Category",
+      "enum": [
+        "housing",
+        "groceries",
+        "utilities",
+        "entertainment",
+        "healthcare"
+      ],
+      "default": "housing"
+    },
+    "label": {
+      "type": "string",
+      "title": "Label"
+    },
+    "limit": {
+      "type": "number",
+      "title": "Limit"
+    },
+    "spent": {
+      "type": "number",
+      "title": "Spent",
+      "default": 0
+    },
+    "color": {
+      "type": "string",
+      "title": "Color"
+    },
+    "family_id": {
+      "type": "string",
+      "title": "Family Id"
+    }
+  },
+  "required": [
+    "category",
+    "label",
+    "limit",
+    "spent"
+  ],
+  "rls": {
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

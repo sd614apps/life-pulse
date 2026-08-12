@@ -1,0 +1,40 @@
+{
+  "properties": {
+    "role": {
+      "type": "string",
+      "description": "The role of the user in the app (platform authz)",
+      "enum": [
+        "admin",
+        "user"
+      ]
+    },
+    "system_role": {
+      "type": "string",
+      "title": "System Role",
+      "enum": [
+        "app_admin",
+        "app_user"
+      ],
+      "default": "app_user"
+    },
+    "family_id": {
+      "type": "string",
+      "title": "Family Id"
+    },
+    "family_role": {
+      "type": "string",
+      "title": "Family Role",
+      "enum": [
+        "family_admin",
+        "family_member",
+        "family_dependent"
+      ],
+      "default": "family_member"
+    }
+  },
+  "required": [
+    "role"
+  ],
+  "name": "User",
+  "type": "object"
+}

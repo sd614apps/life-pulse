@@ -1,0 +1,41 @@
+{
+  "name": "NetWorthPoint",
+  "type": "object",
+  "properties": {
+    "month": {
+      "type": "string",
+      "title": "Month"
+    },
+    "assets": {
+      "type": "number",
+      "title": "Assets"
+    },
+    "liabilities": {
+      "type": "number",
+      "title": "Liabilities"
+    },
+    "family_id": {
+      "type": "string",
+      "title": "Family Id"
+    }
+  },
+  "required": [
+    "month",
+    "assets",
+    "liabilities"
+  ],
+  "rls": {
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

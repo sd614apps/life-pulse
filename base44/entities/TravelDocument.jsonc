@@ -1,0 +1,62 @@
+{
+  "name": "TravelDocument",
+  "type": "object",
+  "properties": {
+    "member_name": {
+      "type": "string",
+      "title": "Member Name"
+    },
+    "doc_type": {
+      "type": "string",
+      "title": "Document Type",
+      "enum": [
+        "passport",
+        "visa",
+        "drivers_license",
+        "other"
+      ],
+      "default": "passport"
+    },
+    "number_masked": {
+      "type": "string",
+      "title": "Number Masked"
+    },
+    "country": {
+      "type": "string",
+      "title": "Country"
+    },
+    "issue_date": {
+      "type": "string",
+      "title": "Issue Date",
+      "format": "date"
+    },
+    "expiry_date": {
+      "type": "string",
+      "title": "Expiry Date",
+      "format": "date"
+    },
+    "family_id": {
+      "type": "string",
+      "title": "Family Id"
+    }
+  },
+  "required": [
+    "member_name",
+    "doc_type",
+    "expiry_date"
+  ],
+  "rls": {
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

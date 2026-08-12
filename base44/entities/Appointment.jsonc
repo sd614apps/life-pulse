@@ -1,0 +1,69 @@
+{
+  "name": "Appointment",
+  "type": "object",
+  "properties": {
+    "member_name": {
+      "type": "string",
+      "title": "Member Name"
+    },
+    "doctor_name": {
+      "type": "string",
+      "title": "Doctor Name"
+    },
+    "specialty": {
+      "type": "string",
+      "title": "Specialty"
+    },
+    "clinic_address": {
+      "type": "string",
+      "title": "Clinic Address"
+    },
+    "appointment_at": {
+      "type": "string",
+      "title": "Appointment At",
+      "format": "date-time"
+    },
+    "status": {
+      "type": "string",
+      "title": "Status",
+      "enum": [
+        "upcoming",
+        "past"
+      ],
+      "default": "upcoming"
+    },
+    "notes": {
+      "type": "string",
+      "title": "Notes"
+    },
+    "reminder_sent": {
+      "type": "boolean",
+      "title": "Reminder Sent",
+      "default": false
+    },
+    "family_id": {
+      "type": "string",
+      "title": "Family Id"
+    }
+  },
+  "required": [
+    "member_name",
+    "doctor_name",
+    "appointment_at",
+    "status"
+  ],
+  "rls": {
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}
