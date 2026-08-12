@@ -1,0 +1,25 @@
+name: Run Test Suite
+
+on:
+  push:
+    branches: [ refactor/remove-base44 ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout local code
+      uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '24'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Execute test cases
+      run: npm test
