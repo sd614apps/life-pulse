@@ -12,6 +12,9 @@ export function safeReturnTo() {
   const raw = new URLSearchParams(window.location.search).get("returnTo");
   if (!raw) return "/";
   try {
+    // Force URI decoding — throws a URIError on malformed sequences like "%" or "%ZZ"
+    decodeURI(raw);
+    
     const url = new URL(raw, window.location.origin);
     if (url.origin !== window.location.origin) return "/";
     // Strip app-bootstrap params: app-params.js persists these from the URL into
