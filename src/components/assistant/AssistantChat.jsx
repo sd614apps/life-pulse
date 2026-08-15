@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Send, Mic, Sparkles, Lock, Maximize2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { base44 } from '@/api/base44Client';
+import { supabase } from '@/lib/supabaseClient';
 import { useAccessibility } from '@/lib/AccessibilityContext';
 import { redactPII } from '@/lib/piiRedact';
 import AssistantCards from './AssistantCards';
@@ -27,57 +27,95 @@ export default function AssistantChat() {
   const { privacyMode } = useAccessibility();
   const navigate = useNavigate();
   const [messages, setMessages] = useState([
-    { role: 'assistant', content: "Hi! I'm your LifePulse Assistant. Ask me about your spending, medications, trips, or family calendar — or tap a quick action below." },
+    {
+      id: 'init-1',
+      role: 'assistant',
+      content: "Hi! I'm your LifePulse Assistant. Ask me about your spending, medications, trips, or family calendar — or tap a quick action below.",
+    },
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [listening, setListening] = useState(false);
-  const scrollRef = React.useRef(null);
+  const scrollRef = useRef(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages, loading]);
 
-  const send = async (text, cap) => {
+  const send = useCallback(async (text, cap) => {
     const content = (text || '').trim();
     if (!content || loading) return;
+
     const redacted = redactPII(content);
-    const history = messages.filter((m) => m.role !== 'card').slice(-6).map((m) => ({ role: m.role, content: m.content }));
-    setMessages((prev) => [...prev, { role: 'user', content: redacted }]);
+    const userMsgId = crypto.randomUUID();
+
+    const history = messages
+      .filter((m) => m.role === 'user' || m.role === 'assistant')
+      .slice(-6)
+      .map((m) => ({ role: m.role, content: m.content }));
+
+    setMessages((prev) => [...prev, { id: userMsgId, role: 'user', content: redacted }]);
     setInput('');
     setLoading(true);
+
     try {
-      const res = await base44.functions.invoke('lifePulseAssistant', {
-        message: redacted,
-        capability: cap || detectCapability(content),
-        history,
+      const { data, error } = await supabase.functions.invoke('lifePulseAssistant', {
+        body: {
+          message: redacted,
+          capability: cap || detectCapability(content),
+          history,
+        },
       });
-      const data = res.data || res || {};
+
+      if (error) throw error;
+
+      const payload = data || {};
       const next = [];
-      if (data.reply) next.push({ role: 'assistant', content: data.reply });
-      if (data.card) next.push({ role: 'card', card: data.card });
-      if (data.action) next.push({ role: 'card', action: data.action });
-      if (!next.length) next.push({ role: 'assistant', content: 'Sorry, I could not process that.' });
+
+      if (payload.reply) {
+        next.push({ id: crypto.randomUUID(), role: 'assistant', content: payload.reply });
+      }
+      if (payload.card) {
+        next.push({ id: crypto.randomUUID(), role: 'card', card: payload.card });
+      }
+      if (payload.action) {
+        next.push({ id: crypto.randomUUID(), role: 'card', action: payload.action });
+      }
+      if (!next.length) {
+        next.push({ id: crypto.randomUUID(), role: 'assistant', content: 'Sorry, I could not process that.' });
+      }
+
       setMessages((prev) => [...prev, ...next]);
-    } catch {
-      setMessages((prev) => [...prev, { role: 'assistant', content: 'Sorry, I had trouble reaching the server. Please try again.' }]);
+    } catch (err) {
+      console.error('[AssistantChat.send]', err);
+      setMessages((prev) => [
+        ...prev,
+        { id: crypto.randomUUID(), role: 'assistant', content: 'Sorry, I had trouble reaching the server. Please try again.' },
+      ]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [loading, messages]);
 
   const voiceInput = () => {
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
       alert('Voice input is not supported in this browser.');
       return;
     }
-    const rec = new SR();
+
+    const rec = new SpeechRecognition();
     rec.lang = 'en-US';
     rec.interimResults = false;
+
     rec.onstart = () => setListening(true);
     rec.onend = () => setListening(false);
-    rec.onresult = (e) => { const t = e.results[0][0].transcript; setInput(t); };
+    rec.onerror = () => setListening(false);
+    rec.onresult = (e) => {
+      const transcript = e.results[0]?.[0]?.transcript;
+      if (transcript) setInput(transcript);
+    };
+
     rec.start();
   };
 
@@ -95,20 +133,28 @@ export default function AssistantChat() {
             </p>
           </div>
         </div>
-        <button onClick={() => navigate('/assistant')} className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground" aria-label="Open full page">
+        <button
+          onClick={() => navigate('/assistant')}
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground"
+          aria-label="Open full page"
+        >
           <Maximize2 className="h-4 w-4" />
         </button>
       </div>
 
       <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto bg-background p-4">
-        {messages.map((m, i) => {
+        {messages.map((m) => {
           if (m.role === 'card') {
-            return <AssistantCards key={i} card={m.card} action={m.action} />;
+            return <AssistantCards key={m.id} card={m.card} action={m.action} />;
           }
           const mine = m.role === 'user';
           return (
-            <div key={i} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[82%] rounded-2xl px-3.5 py-2.5 text-sm ${mine ? 'bg-brand text-brand-foreground' : 'border border-border/70 bg-card text-foreground'}`}>
+            <div key={m.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
+              <div
+                className={`max-w-[82%] rounded-2xl px-3.5 py-2.5 text-sm ${
+                  mine ? 'bg-brand text-brand-foreground' : 'border border-border/70 bg-card text-foreground'
+                }`}
+              >
                 {m.content}
               </div>
             </div>
@@ -116,7 +162,9 @@ export default function AssistantChat() {
         })}
         {loading && (
           <div className="flex justify-start">
-            <div className="rounded-2xl border border-border/70 bg-card px-3.5 py-2.5 text-sm text-muted-foreground">Thinking…</div>
+            <div className="rounded-2xl border border-border/70 bg-card px-3.5 py-2.5 text-sm text-muted-foreground">
+              Thinking…
+            </div>
           </div>
         )}
       </div>
@@ -136,7 +184,11 @@ export default function AssistantChat() {
       <div className="flex items-center gap-2 border-t border-border/70 bg-card p-3">
         <button
           onClick={voiceInput}
-          className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border ${listening ? 'border-red-500 text-red-500 animate-pulse' : 'border-border/70 text-muted-foreground hover:text-foreground'}`}
+          className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border ${
+            listening
+              ? 'border-red-500 text-red-500 animate-pulse'
+              : 'border-border/70 text-muted-foreground hover:text-foreground'
+          }`}
           aria-label="Voice input"
         >
           <Mic className="h-4 w-4" />
@@ -144,11 +196,21 @@ export default function AssistantChat() {
         <Input
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Enter') send(input); }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              send(input);
+            }
+          }}
           placeholder="Ask anything…"
           className="h-10 flex-1"
         />
-        <Button onClick={() => send(input)} disabled={loading || !input.trim()} className="h-10 w-10 p-0" aria-label="Send">
+        <Button
+          onClick={() => send(input)}
+          disabled={loading || !input.trim()}
+          className="h-10 w-10 p-0"
+          aria-label="Send"
+        >
           <Send className="h-4 w-4" />
         </Button>
       </div>
