@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { base44 } from '@/api/base44Client';
+import { entities } from '@/lib/entities';
+import { supabase } from '@/lib/supabaseClient';
 import { useToast } from '@/components/ui/use-toast';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
@@ -45,8 +46,8 @@ export default function ActionCenter() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const list = await base44.entities.Notification.filter({
-        status: showSnoozed ? 'snoozed' : 'active',
+      const list = await entities.Notification.list({
+        filter: { status: showSnoozed ? 'snoozed' : 'active' },
       });
       const sorted = (list || []).sort((a, b) => {
         const sp = (PRIORITY[a.severity] ?? 9) - (PRIORITY[b.severity] ?? 9);
@@ -56,7 +57,8 @@ export default function ActionCenter() {
         return ad - bd;
       });
       setItems(sorted);
-    } catch {
+    } catch (err) {
+      console.error('[ActionCenter.load]', err);
       setItems([]);
     } finally {
       setLoading(false);
@@ -65,16 +67,31 @@ export default function ActionCenter() {
 
   useEffect(() => {
     load();
-    const unsub = base44.entities.Notification.subscribe?.(() => load());
-    return () => unsub && unsub();
+
+    // Supabase Realtime channel for live notifications updates
+    const channel = supabase
+      .channel('schema-notifications-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'notifications' },
+        () => {
+          load();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [load]);
 
   const complete = async (id) => {
     setItems((prev) => prev.filter((n) => n.id !== id));
     try {
-      await base44.entities.Notification.update(id, { status: 'completed' });
+      await entities.Notification.complete(id);
       toast({ title: 'Dismissed' });
-    } catch {
+    } catch (err) {
+      console.error('[ActionCenter.complete]', err);
       load();
     }
   };
@@ -82,9 +99,10 @@ export default function ActionCenter() {
   const snooze = async (id, dueDate) => {
     setItems((prev) => prev.filter((n) => n.id !== id));
     try {
-      await base44.entities.Notification.update(id, { status: 'snoozed', due_date: dueDate });
+      await entities.Notification.update(id, { status: 'snoozed', due_date: dueDate });
       toast({ title: 'Snoozed' });
-    } catch {
+    } catch (err) {
+      console.error('[ActionCenter.snooze]', err);
       load();
     }
   };
@@ -92,9 +110,10 @@ export default function ActionCenter() {
   const reactivate = async (id) => {
     setItems((prev) => prev.filter((n) => n.id !== id));
     try {
-      await base44.entities.Notification.update(id, { status: 'active' });
+      await entities.Notification.update(id, { status: 'active' });
       toast({ title: 'Reactivated' });
-    } catch {
+    } catch (err) {
+      console.error('[ActionCenter.reactivate]', err);
       load();
     }
   };
@@ -103,14 +122,15 @@ export default function ActionCenter() {
     const targets = items.filter((n) => n.severity !== 'critical');
     if (!targets.length) return;
     try {
-      await base44.entities.Notification.updateMany(
-        { status: 'active', severity: { $in: ['pending', 'upcoming'] } },
-        { $set: { status: 'completed' } }
+      await Promise.all(
+        targets.map((n) => entities.Notification.complete(n.id))
       );
       toast({ title: `${targets.length} reminders marked as read` });
       load();
-    } catch {
+    } catch (err) {
+      console.error('[ActionCenter.markNonCriticalRead]', err);
       toast({ title: 'Could not update', variant: 'destructive' });
+      load();
     }
   };
 

@@ -18,10 +18,13 @@ export default function TileShell({ icon: Icon, title, accent, children, action,
     return (
       <div
         onClick={onClick}
+        role={onClick ? 'button' : undefined}
+        tabIndex={onClick ? 0 : undefined}
+        onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(e); } } : undefined}
         className={`flex flex-col overflow-hidden rounded-2xl border border-border/70 bg-card ${onClick ? 'cursor-pointer hover:border-brand/40' : ''}`}
       >
         <div className="relative h-20">
-          <Image src={cover} alt={title} fittingType="fill" className="absolute inset-0 h-full w-full" />
+          <Image src={cover} alt={title} fittingType="fill" className="absolute inset-0 h-full w-full object-cover" />
           <div className="absolute inset-0 bg-gradient-to-r from-black/70 to-black/30" />
           <div className="relative flex h-full items-center px-4">{headerInner}</div>
         </div>
@@ -33,6 +36,9 @@ export default function TileShell({ icon: Icon, title, accent, children, action,
   return (
     <div
       onClick={onClick}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(e); } } : undefined}
       className={`flex flex-col rounded-2xl border border-border/70 bg-card p-5 ${onClick ? 'cursor-pointer hover:border-brand/40' : ''}`}
     >
       {headerInner}

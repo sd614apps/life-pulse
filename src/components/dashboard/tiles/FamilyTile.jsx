@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
+import { entities } from '@/lib/entities';
 import { Home, CalendarDays, CheckSquare, Plus } from 'lucide-react';
 import { useLocale } from '@/lib/LocaleContext';
 import TileShell from './TileShell';
 
-const COVER = 'https://media.base44.com/images/public/6a737f97d9e3ddd06cf02735/f643c4574_generated_image.png';
+const COVER = '/images/family-tile-cover.png';
 
 export default function FamilyTile() {
   const navigate = useNavigate();
@@ -14,11 +14,28 @@ export default function FamilyTile() {
   const [tasks, setTasks] = useState(null);
 
   useEffect(() => {
-    base44.entities.CalendarEvent.list('-event_at', 20).then((list) => {
-      const now = new Date();
-      setEvents((list || []).filter((e) => new Date(e.event_at) >= now).slice(0, 2));
-    }).catch(() => setEvents([]));
-    base44.entities.SharedTask.filter({ status: 'active' }).then((list) => setTasks((list || []).slice(0, 2))).catch(() => setTasks([]));
+    entities.CalendarEvent.list({
+      orderBy: 'event_at:desc',
+      limit: 20,
+    })
+      .then((list) => {
+        const now = new Date();
+        setEvents((list || []).filter((e) => new Date(e.event_at) >= now).slice(0, 2));
+      })
+      .catch((err) => {
+        console.error('[FamilyTile.CalendarEvent]', err);
+        setEvents([]);
+      });
+
+    entities.SharedTask.list({
+      filter: { status: 'active' },
+      limit: 2,
+    })
+      .then((list) => setTasks(list || []))
+      .catch((err) => {
+        console.error('[FamilyTile.SharedTask]', err);
+        setTasks([]);
+      });
   }, []);
 
   const empty = events !== null && tasks !== null && events.length === 0 && tasks.length === 0;

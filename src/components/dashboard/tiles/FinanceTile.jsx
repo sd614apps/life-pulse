@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
+import { entities } from '@/lib/entities';
 import { Wallet, ArrowUpRight, ArrowDownRight, Plus } from 'lucide-react';
 import { useMoney } from '@/lib/useMoney';
 import TileShell from './TileShell';
 
-const COVER = 'https://media.base44.com/images/public/6a737f97d9e3ddd06cf02735/7251f2013_generated_image.png';
+const COVER = '/images/finance-tile-cover.png';
 
 export default function FinanceTile() {
   const navigate = useNavigate();
@@ -15,18 +15,32 @@ export default function FinanceTile() {
   const [budget, setBudget] = useState({ used: 0, limit: 0 });
 
   useEffect(() => {
-    base44.entities.Transaction.list('-date', 50).then((list) => {
-      const items = list || [];
-      setBalance(items.reduce((s, t) => s + (t.type === 'income' ? t.amount : -t.amount), 0));
-      setTxns(items.slice(0, 3));
-    }).catch(() => { setBalance(0); setTxns([]); });
-    base44.entities.BudgetCategory.list().then((list) => {
-      const items = list || [];
-      setBudget({
-        used: items.reduce((s, c) => s + (c.spent || 0), 0),
-        limit: items.reduce((s, c) => s + (c.limit || 0), 0),
+    entities.Transaction.list({
+      orderBy: 'date:desc',
+      limit: 50,
+    })
+      .then((list) => {
+        const items = list || [];
+        setBalance(items.reduce((s, t) => s + (t.type === 'income' ? Number(t.amount || 0) : -Number(t.amount || 0)), 0));
+        setTxns(items.slice(0, 3));
+      })
+      .catch((err) => {
+        console.error('[FinanceTile.Transaction]', err);
+        setBalance(0);
+        setTxns([]);
       });
-    }).catch(() => {});
+
+    entities.BudgetCategory.list()
+      .then((list) => {
+        const items = list || [];
+        setBudget({
+          used: items.reduce((s, c) => s + Number(c.spent || 0), 0),
+          limit: items.reduce((s, c) => s + Number(c.limit || 0), 0),
+        });
+      })
+      .catch((err) => {
+        console.error('[FinanceTile.BudgetCategory]', err);
+      });
   }, []);
 
   const pct = budget.limit > 0 ? Math.min(100, Math.round((budget.used / budget.limit) * 100)) : 0;

@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
+import { entities } from '@/lib/entities';
 import { ShieldCheck, Lock, FileText, Plus } from 'lucide-react';
 import { differenceInCalendarDays, parseISO } from 'date-fns';
 import TileShell from './TileShell';
 
-const COVER = 'https://media.base44.com/images/public/6a737f97d9e3ddd06cf02735/dce3763f6_generated_image.png';
+const COVER = '/images/vault-tile-cover.png';
 
 const STATUS = (days) => {
+  if (days === null) return { dot: 'bg-emerald-500', text: 'text-emerald-600 dark:text-emerald-400', label: 'Secure' };
   if (days < 0) return { dot: 'bg-rose-500', text: 'text-rose-600 dark:text-rose-400', label: 'Expired' };
   if (days <= 60) return { dot: 'bg-amber-500', text: 'text-amber-600 dark:text-amber-400', label: 'Attention' };
   return { dot: 'bg-emerald-500', text: 'text-emerald-600 dark:text-emerald-400', label: 'Secure' };
@@ -18,13 +19,19 @@ export default function VaultTile() {
   const [items, setItems] = useState(null);
 
   useEffect(() => {
-    base44.entities.VaultItem.list().then((list) => setItems(list || [])).catch(() => setItems([]));
+    entities.VaultItem.list()
+      .then((list) => setItems(list || []))
+      .catch((err) => {
+        console.error('[VaultTile.VaultItem]', err);
+        setItems([]);
+      });
   }, []);
 
   const docs = (items || []).slice(0, 4).map((d) => {
     const days = d.expires_at ? differenceInCalendarDays(parseISO(d.expires_at), new Date()) : null;
-    return { name: d.title, status: days === null ? 'secure' : STATUS(days), note: d.category };
+    return { name: d.title, status: STATUS(days), note: d.category };
   });
+
   const expiring = (items || []).filter((d) => {
     if (!d.expires_at) return false;
     const days = differenceInCalendarDays(parseISO(d.expires_at), new Date());
@@ -43,7 +50,13 @@ export default function VaultTile() {
       {items === null ? (
         <div className="h-16 animate-pulse rounded bg-muted" />
       ) : items.length === 0 ? (
-        <button onClick={(e) => { e.stopPropagation(); navigate('/vault'); }} className="flex w-full items-center gap-2 rounded-lg border border-dashed border-border/70 px-3 py-3 text-xs text-muted-foreground hover:text-foreground">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            navigate('/vault');
+          }}
+          className="flex w-full items-center gap-2 rounded-lg border border-dashed border-border/70 px-3 py-3 text-xs text-muted-foreground hover:text-foreground"
+        >
           <Plus className="h-4 w-4" /> Add a document to your vault
         </button>
       ) : (

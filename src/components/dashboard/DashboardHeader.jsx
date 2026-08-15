@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
+import { entities } from '@/lib/entities';
+import { supabase } from '@/lib/supabaseClient';
 import { useAccessibility } from '@/lib/AccessibilityContext';
 import {
   Activity, Type, Contrast, EyeOff, ChevronDown, LogOut, Check,
@@ -24,7 +25,9 @@ function MiniToggle({ active, onClick, icon: Icon, label }) {
       aria-pressed={active}
       title={label}
       className={`inline-flex h-10 w-10 items-center justify-center rounded-full border transition-colors ${
-        active ? 'border-brand bg-brand/10 text-brand' : 'border-border/70 bg-card text-muted-foreground hover:text-foreground'
+        active
+          ? 'border-brand bg-brand/10 text-brand'
+          : 'border-border/70 bg-card text-muted-foreground hover:text-foreground'
       }`}
     >
       <Icon className="h-4 w-4" />
@@ -45,13 +48,17 @@ export default function DashboardHeader() {
   const [regionOpen, setRegionOpen] = useState(false);
 
   useEffect(() => {
-    base44.entities.Profile.list().then((items) => {
-      setProfiles(items || []);
-      if ((!activeId || !items.find((p) => p.id === activeId)) && items.length) {
-        setActiveId(items[0].id);
-        localStorage.setItem('lp-active-profile', items[0].id);
-      }
-    }).catch(() => {});
+    entities.Profile.list()
+      .then((items) => {
+        setProfiles(items || []);
+        if ((!activeId || !items.find((p) => p.id === activeId)) && items.length) {
+          setActiveId(items[0].id);
+          localStorage.setItem('lp-active-profile', items[0].id);
+        }
+      })
+      .catch((err) => {
+        console.error('[DashboardHeader.loadProfiles]', err);
+      });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -63,7 +70,15 @@ export default function DashboardHeader() {
     if (p.view_mode === 'simplified') setLargeText(true);
   };
 
-  const signOut = () => base44.auth.logout('/');
+  const signOut = async () => {
+    try {
+      await supabase.auth.signOut();
+      localStorage.removeItem('lp-active-profile');
+      navigate('/');
+    } catch (err) {
+      console.error('[DashboardHeader.signOut]', err);
+    }
+  };
 
   return (
     <header className="sticky top-0 z-40 border-b border-border/60 bg-background/85 backdrop-blur-md">
@@ -129,15 +144,29 @@ export default function DashboardHeader() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-60">
               <DropdownMenuLabel>Account</DropdownMenuLabel>
-              <DropdownMenuItem onSelect={() => navigate('/profile')} className="gap-2"><User className="h-4 w-4" /> Profile</DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => setRegionOpen(true)} className="gap-2"><Globe className="h-4 w-4" /> Region &amp; Units</DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => navigate('/security')} className="gap-2"><ShieldCheck className="h-4 w-4" /> Security &amp; Privacy</DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => navigate('/profile')} className="gap-2">
+                <User className="h-4 w-4" /> Profile
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setRegionOpen(true)} className="gap-2">
+                <Globe className="h-4 w-4" /> Region &amp; Units
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => navigate('/security')} className="gap-2">
+                <ShieldCheck className="h-4 w-4" /> Security &amp; Privacy
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onSelect={() => navigate('/terms')} className="gap-2"><FileText className="h-4 w-4" /> Terms of Service</DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => navigate('/privacy')} className="gap-2"><Lock className="h-4 w-4" /> Privacy Policy</DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => navigate('/contact')} className="gap-2"><HelpCircle className="h-4 w-4" /> Contact &amp; Support</DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => navigate('/terms')} className="gap-2">
+                <FileText className="h-4 w-4" /> Terms of Service
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => navigate('/privacy')} className="gap-2">
+                <Lock className="h-4 w-4" /> Privacy Policy
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => navigate('/contact')} className="gap-2">
+                <HelpCircle className="h-4 w-4" /> Contact &amp; Support
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onSelect={signOut} className="gap-2 text-destructive"><LogOut className="h-4 w-4" /> Sign out</DropdownMenuItem>
+              <DropdownMenuItem onSelect={signOut} className="gap-2 text-destructive">
+                <LogOut className="h-4 w-4" /> Sign out
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

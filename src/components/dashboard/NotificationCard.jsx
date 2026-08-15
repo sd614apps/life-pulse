@@ -21,7 +21,14 @@ const CTA_LABEL = {
   vault: 'Open',
 };
 
-export default function NotificationCard({ n, sev, CatIcon, onComplete, onSnooze, onReactivate }) {
+export default function NotificationCard({
+  n,
+  sev,
+  CatIcon,
+  onComplete,
+  onSnooze,
+  onReactivate,
+}) {
   const navigate = useNavigate();
   const { formatDue } = useLocale();
   const SevIcon = sev.icon;
@@ -39,9 +46,14 @@ export default function NotificationCard({ n, sev, CatIcon, onComplete, onSnooze
 
   return (
     <div className="relative overflow-hidden rounded-xl">
+      {/* Background swipe indicators */}
       <div className="pointer-events-none absolute inset-0 flex items-center justify-between px-4">
-        <span className="flex items-center gap-1.5 text-xs font-semibold text-amber-600"><AlarmClock className="h-4 w-4" /> Snooze</span>
-        <span className="flex items-center gap-1.5 text-xs font-semibold text-red-600">Dismiss <Trash2 className="h-4 w-4" /></span>
+        <span className="flex items-center gap-1.5 text-xs font-semibold text-amber-600">
+          <AlarmClock className="h-4 w-4" /> Snooze
+        </span>
+        <span className="flex items-center gap-1.5 text-xs font-semibold text-red-600">
+          Dismiss <Trash2 className="h-4 w-4" />
+        </span>
       </div>
 
       <motion.div
@@ -50,7 +62,7 @@ export default function NotificationCard({ n, sev, CatIcon, onComplete, onSnooze
         dragSnapToOrigin
         dragConstraints={{ left: 0, right: 0 }}
         dragElastic={0.6}
-        onDragEnd={(e, info) => {
+        onDragEnd={(_e, info) => {
           if (info.offset.x < -110) onComplete(n.id);
           else if (info.offset.x > 110) snoozeTo('tomorrow');
         }}
@@ -58,49 +70,85 @@ export default function NotificationCard({ n, sev, CatIcon, onComplete, onSnooze
       >
         <span className={`absolute inset-y-0 left-0 w-1.5 ${sev.bar}`} />
         <div className="flex items-start gap-3 pl-1">
-          <div className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg ${sev.chip}`}>
+          <div
+            className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg ${sev.chip}`}
+          >
             <CatIcon className="h-4 w-4" />
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <p className="text-sm font-semibold text-foreground">{n.title}</p>
-              <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${sev.chip}`}>
+              <span
+                className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${sev.chip}`}
+              >
                 <SevIcon className="h-3 w-3" /> {sev.label}
               </span>
             </div>
-            {n.description && <p className="mt-0.5 text-xs text-muted-foreground">{n.description}</p>}
+            {n.description && (
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {n.description}
+              </p>
+            )}
             {due && (
-              <p className={`mt-1 text-xs ${overdue ? 'font-medium text-red-600 dark:text-red-400' : 'text-muted-foreground'}`}>
+              <p
+                className={`mt-1 text-xs ${
+                  overdue
+                    ? 'font-medium text-red-600 dark:text-red-400'
+                    : 'text-muted-foreground'
+                }`}
+              >
                 {formatDue(n.due_date)}
               </p>
             )}
 
             <div className="mt-2 flex flex-wrap items-center gap-2">
               {!snoozed && n.target_path && (
-                <Button size="sm" onClick={() => navigate(n.target_path)} className="min-h-[48px] gap-1 rounded-full px-4 text-xs">
-                  {CTA_LABEL[n.category] || 'Open'} <ChevronRight className="h-3.5 w-3.5" />
+                <Button
+                  size="sm"
+                  onClick={() => navigate(n.target_path)}
+                  className="min-h-[48px] gap-1 rounded-full px-4 text-xs"
+                >
+                  {CTA_LABEL[n.category] || 'Open'}{' '}
+                  <ChevronRight className="h-3.5 w-3.5" />
                 </Button>
               )}
               {!snoozed && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button className="inline-flex min-h-[48px] items-center gap-1.5 rounded-full border border-border/70 bg-card px-3 text-xs font-medium text-foreground hover:border-amber-500/50 hover:text-amber-600">
+                    <button
+                      className="inline-flex min-h-[48px] items-center gap-1.5 rounded-full border border-border/70 bg-card px-3 text-xs font-medium text-foreground hover:border-amber-500/50 hover:text-amber-600"
+                      aria-label="Snooze notification"
+                    >
                       <Clock className="h-3.5 w-3.5" /> Snooze
                     </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start">
-                    <DropdownMenuItem onSelect={() => snoozeTo('tomorrow')}>Tomorrow</DropdownMenuItem>
-                    <DropdownMenuItem onSelect={() => snoozeTo('nextweek')}>Next Week</DropdownMenuItem>
-                    <DropdownMenuItem onSelect={() => snoozeTo('1hr')}>Remind 1 Hour Before</DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => snoozeTo('tomorrow')}>
+                      Tomorrow
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => snoozeTo('nextweek')}>
+                      Next Week
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => snoozeTo('1hr')}>
+                      Remind 1 Hour Before
+                    </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}
               {!snoozed ? (
-                <button onClick={() => onComplete(n.id)} className="inline-flex min-h-[48px] items-center gap-1.5 rounded-full border border-border/70 bg-card px-3 text-xs font-medium text-foreground hover:border-red-500/50 hover:text-red-600">
+                <button
+                  onClick={() => onComplete(n.id)}
+                  className="inline-flex min-h-[48px] items-center gap-1.5 rounded-full border border-border/70 bg-card px-3 text-xs font-medium text-foreground hover:border-red-500/50 hover:text-red-600"
+                  aria-label="Dismiss notification"
+                >
                   <X className="h-3.5 w-3.5" /> Dismiss
                 </button>
               ) : (
-                <button onClick={() => onReactivate(n.id)} className="inline-flex min-h-[48px] items-center gap-1.5 rounded-full border border-border/70 bg-card px-3 text-xs font-medium text-foreground hover:border-brand/50 hover:text-brand">
+                <button
+                  onClick={() => onReactivate(n.id)}
+                  className="inline-flex min-h-[48px] items-center gap-1.5 rounded-full border border-border/70 bg-card px-3 text-xs font-medium text-foreground hover:border-brand/50 hover:text-brand"
+                  aria-label="Reactivate notification"
+                >
                   <Bell className="h-3.5 w-3.5" /> Reactivate
                 </button>
               )}

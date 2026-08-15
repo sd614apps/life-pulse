@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { entities } from '@/lib/entities';
 import { useToast } from '@/components/ui/use-toast';
 import { Plus, Wallet, HeartPulse, CheckSquare, Plane, ChevronLeft, Loader2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -27,6 +27,7 @@ export default function QuickAddButton({ onAdded }) {
     setTitle('');
     setAmount('');
   };
+  
   const close = () => {
     setOpen(false);
     setTimeout(reset, 200);
@@ -36,22 +37,25 @@ export default function QuickAddButton({ onAdded }) {
     e.preventDefault();
     const t = TYPES.find((x) => x.key === typeKey);
     if (!t || !title.trim()) return;
+    
     setSaving(true);
     try {
-      await base44.entities.Notification.create({
+      await entities.Notification.create({
         title: t.hasAmount && amount ? `${title} (${amount})` : title,
-        description: `Logged via Quick Add`,
+        description: 'Logged via Quick Add',
         severity: t.severity,
         category: t.category,
         status: 'active',
         target_path: `/${t.category}`,
         amount: t.hasAmount ? amount : '',
       });
+
       toast({ title: `${t.label} added`, description: 'It now appears in your Action Center.' });
       onAdded?.();
       close();
-    } catch {
-      toast({ title: 'Could not save', variant: 'destructive' });
+    } catch (err) {
+      console.error('[QuickAddButton.submit]', err);
+      toast({ title: 'Could not save', description: err.message, variant: 'destructive' });
     } finally {
       setSaving(false);
     }
@@ -109,13 +113,13 @@ export default function QuickAddButton({ onAdded }) {
                     id="qa-title"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    placeholder={TYPES.find((x) => x.key === typeKey).titleHint}
+                    placeholder={TYPES.find((x) => x.key === typeKey)?.titleHint}
                     className="min-h-[48px]"
                     autoFocus
                     required
                   />
                 </div>
-                {TYPES.find((x) => x.key === typeKey).hasAmount && (
+                {TYPES.find((x) => x.key === typeKey)?.hasAmount && (
                   <div className="space-y-1.5">
                     <Label htmlFor="qa-amount">Amount / value</Label>
                     <Input
