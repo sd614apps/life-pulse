@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { entities } from '@/lib/entities';
 import { useMoney } from '@/lib/useMoney';
 import { ArrowUpRight, ArrowDownRight } from 'lucide-react';
 
@@ -21,7 +21,12 @@ export default function HoldingsTable() {
   const [rows, setRows] = useState([]);
 
   useEffect(() => {
-    base44.entities.Holding.list().then((list) => setRows(list || [])).catch(() => setRows([]));
+    entities.Holding.list()
+      .then((list) => setRows(list || []))
+      .catch((err) => {
+        console.error('[HoldingsTable.Holding]', err);
+        setRows([]);
+      });
   }, []);
 
   return (
@@ -40,20 +45,26 @@ export default function HoldingsTable() {
           </thead>
           <tbody>
             {rows.map((r) => {
-              const up = (r.daily_change_amount || 0) >= 0;
+              const up = Number(r.daily_change_amount || 0) >= 0;
               return (
                 <tr key={r.id} className="border-b border-border/40">
                   <td className="py-2.5 pr-3 font-medium text-foreground">{r.asset_name}</td>
-                  <td className="py-2.5 pr-3 text-muted-foreground">{CLASS_LABEL[r.asset_class] || r.asset_class}</td>
-                  <td className="py-2.5 pr-3 text-right font-semibold text-foreground">{money(r.balance)}</td>
+                  <td className="py-2.5 pr-3 text-muted-foreground">
+                    {CLASS_LABEL[r.asset_class] || r.asset_class}
+                  </td>
+                  <td className="py-2.5 pr-3 text-right font-semibold text-foreground">
+                    {money(Number(r.balance || 0))}
+                  </td>
                   <td className={`py-2.5 pr-3 text-right ${up ? 'text-emerald-600' : 'text-rose-600'}`}>
                     {privacyMode ? (
                       <span>••••</span>
                     ) : (
                       <span className="inline-flex items-center gap-1">
                         {up ? <ArrowUpRight className="h-3.5 w-3.5" /> : <ArrowDownRight className="h-3.5 w-3.5" />}
-                        {up ? '+' : ''}{money(Math.abs(r.daily_change_amount || 0))}
-                        <span className="text-xs">({up ? '+' : ''}{(r.daily_change_pct || 0).toFixed(2)}%)</span>
+                        {up ? '+' : ''}{money(Math.abs(Number(r.daily_change_amount || 0)))}
+                        <span className="text-xs">
+                          ({up ? '+' : ''}{Number(r.daily_change_pct || 0).toFixed(2)}%)
+                        </span>
                       </span>
                     )}
                   </td>

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { entities } from '@/lib/entities';
 import { Phone, Siren, Stethoscope, Users, HeartPulse } from 'lucide-react';
 
 const KIND_ICON = { services: Siren, doctor: Stethoscope, family: Users, ice: HeartPulse };
@@ -14,9 +14,12 @@ export default function EmergencyTab() {
   const [contacts, setContacts] = useState([]);
 
   useEffect(() => {
-    base44.entities.EmergencyContact.list()
+    entities.EmergencyContact.list()
       .then((list) => setContacts(list || []))
-      .catch(() => setContacts([]));
+      .catch((err) => {
+        console.error('[EmergencyTab.EmergencyContact]', err);
+        setContacts([]);
+      });
   }, []);
 
   return (

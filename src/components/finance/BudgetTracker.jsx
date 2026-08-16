@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { entities } from '@/lib/entities';
 import { useMoney } from '@/lib/useMoney';
 
 const DEFAULT_COLORS = {
@@ -15,7 +15,12 @@ export default function BudgetTracker() {
   const [cats, setCats] = useState([]);
 
   useEffect(() => {
-    base44.entities.BudgetCategory.list().then((list) => setCats(list || [])).catch(() => setCats([]));
+    entities.BudgetCategory.list()
+      .then((list) => setCats(list || []))
+      .catch((err) => {
+        console.error('[BudgetTracker.BudgetCategory]', err);
+        setCats([]);
+      });
   }, []);
 
   return (
@@ -24,19 +29,30 @@ export default function BudgetTracker() {
       <p className="text-xs text-muted-foreground">Monthly progress by category</p>
       <div className="mt-4 space-y-4">
         {cats.map((c) => {
-          const pct = c.limit > 0 ? Math.min(100, Math.round((c.spent / c.limit) * 100)) : 0;
-          const over = c.spent > c.limit;
+          const spent = Number(c.spent || 0);
+          const limit = Number(c.limit || 0);
+          const pct = limit > 0 ? Math.min(100, Math.round((spent / limit) * 100)) : 0;
+          const over = spent > limit;
           const color = c.color || DEFAULT_COLORS[c.category] || '#64748b';
+
           return (
             <div key={c.id}>
               <div className="flex items-center justify-between text-sm">
                 <span className="font-medium text-foreground">{c.label}</span>
-                <span className="text-muted-foreground">{money(c.spent)} / {money(c.limit)}</span>
+                <span className="text-muted-foreground">
+                  {money(spent)} / {money(limit)}
+                </span>
               </div>
               <div className="mt-1.5 h-2.5 w-full overflow-hidden rounded-full bg-muted">
-                <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: color }} />
+                <div
+                  className="h-full rounded-full transition-all"
+                  style={{ width: `${pct}%`, backgroundColor: color }}
+                />
               </div>
-              <div className="mt-1 text-[11px]" style={{ color: over ? '#ef4444' : 'hsl(var(--muted-foreground))' }}>
+              <div
+                className="mt-1 text-[11px]"
+                style={{ color: over ? '#ef4444' : 'hsl(var(--muted-foreground))' }}
+              >
                 {pct}% used{over ? ' · over budget' : ''}
               </div>
             </div>

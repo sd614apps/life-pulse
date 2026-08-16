@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { entities } from '@/lib/entities';
 import { format, parseISO } from 'date-fns';
 import { FileText, FlaskConical, Image, Syringe, AlertTriangle, HeartPulse } from 'lucide-react';
 
@@ -17,9 +17,15 @@ export default function MedicalRecordsTab() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    base44.entities.MedicalRecord.list('-date', 100)
+    entities.MedicalRecord.list({
+      orderBy: 'date:desc',
+      limit: 100,
+    })
       .then((list) => setRecords(list || []))
-      .catch(() => setRecords([]))
+      .catch((err) => {
+        console.error('[MedicalRecordsTab.load]', err);
+        setRecords([]);
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -42,7 +48,7 @@ export default function MedicalRecordsTab() {
             </div>
             <p className="mt-3 text-sm text-muted-foreground">{r.summary}</p>
             <div className="mt-2 text-xs text-muted-foreground">
-              {r.member_name} · {format(parseISO(r.date), 'd MMM yyyy')} · {r.provider}
+              {r.member_name} · {r.date ? format(parseISO(r.date), 'd MMM yyyy') : '—'} · {r.provider}
             </div>
           </div>
         );

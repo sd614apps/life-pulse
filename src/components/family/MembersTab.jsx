@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { entities } from '@/lib/entities';
 import { useToast } from '@/components/ui/use-toast';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Shield } from 'lucide-react';
@@ -28,19 +28,28 @@ export default function MembersTab() {
 
   const load = async () => {
     try {
-      setMembers(await base44.entities.Profile.list() || []);
-    } catch {
+      const data = await entities.Profile.list();
+      setMembers(data || []);
+    } catch (err) {
+      console.error('[MembersTab.load]', err);
       setMembers([]);
     }
   };
-  useEffect(() => { load(); }, []);
+
+  useEffect(() => {
+    load();
+  }, []);
 
   const changeRole = async (id, level) => {
     try {
-      await base44.entities.Profile.update(id, { permission_level: level });
-      toast({ title: 'Permission updated', description: `${PERMISSIONS[level].label} access applied.` });
+      await entities.Profile.update(id, { permission_level: level });
+      toast({
+        title: 'Permission updated',
+        description: `${PERMISSIONS[level]?.label || level} access applied.`,
+      });
       load();
-    } catch {
+    } catch (err) {
+      console.error('[MembersTab.changeRole]', err);
       toast({ title: 'Could not update', variant: 'destructive' });
     }
   };

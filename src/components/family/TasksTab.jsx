@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { entities } from '@/lib/entities';
 import { useToast } from '@/components/ui/use-toast';
 import { format, parseISO } from 'date-fns';
 import { Plus, Check } from 'lucide-react';
@@ -19,18 +19,23 @@ export default function TasksTab() {
 
   const load = async () => {
     try {
-      setTasks(await base44.entities.SharedTask.filter({}) || []);
-    } catch {
+      const list = await entities.SharedTask.list();
+      setTasks(list || []);
+    } catch (err) {
+      console.error('[TasksTab.load]', err);
       setTasks([]);
     }
   };
-  useEffect(() => { load(); }, []);
+
+  useEffect(() => {
+    load();
+  }, []);
 
   const add = async (e) => {
     e.preventDefault();
     if (!title.trim()) return;
     try {
-      await base44.entities.SharedTask.create({
+      await entities.SharedTask.create({
         title,
         assignee: 'Eleanor Hayes',
         due_date: new Date().toISOString().slice(0, 10),
@@ -41,19 +46,27 @@ export default function TasksTab() {
       setTitle('');
       toast({ title: 'Task added' });
       load();
-    } catch {
+    } catch (err) {
+      console.error('[TasksTab.add]', err);
       toast({ title: 'Could not add task', variant: 'destructive' });
     }
   };
 
   const toggle = async (t) => {
-    await base44.entities.SharedTask.update(t.id, {
-      status: t.status === 'completed' ? 'active' : 'completed',
-    });
-    load();
+    try {
+      await entities.SharedTask.update(t.id, {
+        status: t.status === 'completed' ? 'active' : 'completed',
+      });
+      load();
+    } catch (err) {
+      console.error('[TasksTab.toggle]', err);
+      toast({ title: 'Could not update task', variant: 'destructive' });
+    }
   };
 
-  const sorted = [...tasks].sort((a, b) => (a.status === 'completed') - (b.status === 'completed'));
+  const sorted = [...tasks].sort(
+    (a, b) => (a.status === 'completed' ? 1 : 0) - (b.status === 'completed' ? 1 : 0)
+  );
 
   return (
     <div className="space-y-4">
@@ -74,21 +87,31 @@ export default function TasksTab() {
             <button
               onClick={() => toggle(t)}
               className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full border ${
-                t.status === 'completed' ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-border text-transparent'
+                t.status === 'completed'
+                  ? 'border-emerald-500 bg-emerald-500 text-white'
+                  : 'border-border text-transparent'
               }`}
               aria-label="Toggle complete"
             >
               <Check className="h-4 w-4" />
             </button>
             <div className="min-w-0 flex-1">
-              <div className={`text-sm font-medium ${t.status === 'completed' ? 'text-muted-foreground line-through' : 'text-foreground'}`}>
+              <div
+                className={`text-sm font-medium ${
+                  t.status === 'completed' ? 'text-muted-foreground line-through' : 'text-foreground'
+                }`}
+              >
                 {t.title}
               </div>
               <div className="text-xs text-muted-foreground">
-                {t.assignee} · due {format(parseISO(t.due_date), 'd MMM yyyy')}
+                {t.assignee} · due {t.due_date ? format(parseISO(t.due_date), 'd MMM yyyy') : '—'}
               </div>
             </div>
-            <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium capitalize ${PRIORITY[t.priority] || PRIORITY.medium}`}>
+            <span
+              className={`rounded-full px-2 py-0.5 text-[10px] font-medium capitalize ${
+                PRIORITY[t.priority] || PRIORITY.medium
+              }`}
+            >
               {t.priority}
             </span>
           </li>

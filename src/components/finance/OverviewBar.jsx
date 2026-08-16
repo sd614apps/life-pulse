@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { entities } from '@/lib/entities';
 import { useMoney } from '@/lib/useMoney';
 import { parseISO, isSameMonth } from 'date-fns';
 import { Wallet, ArrowUpRight, ArrowDownRight, PiggyBank } from 'lucide-react';
@@ -12,23 +12,33 @@ export default function OverviewBar() {
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    base44.entities.Transaction.list('-date', 300)
+    entities.Transaction.list({
+      orderBy: 'date:desc',
+      limit: 300,
+    })
       .then((list) => setTxns(list || []))
-      .catch(() => setTxns([]))
+      .catch((err) => {
+        console.error('[OverviewBar.Transaction]', err);
+        setTxns([]);
+      })
       .finally(() => setLoaded(true));
   }, []);
 
   const now = new Date();
-  const incomeAll = txns.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0);
-  const expenseAll = txns.filter((t) => t.type === 'expense').reduce((s, t) => s + Math.abs(t.amount), 0);
+  const incomeAll = txns
+    .filter((t) => t.type === 'income')
+    .reduce((s, t) => s + Number(t.amount || 0), 0);
+  const expenseAll = txns
+    .filter((t) => t.type === 'expense')
+    .reduce((s, t) => s + Math.abs(Number(t.amount || 0)), 0);
   const totalCash = STARTING_CASH + incomeAll - expenseAll;
 
   const mIncome = txns
     .filter((t) => t.type === 'income' && t.date && isSameMonth(parseISO(t.date), now))
-    .reduce((s, t) => s + t.amount, 0);
+    .reduce((s, t) => s + Number(t.amount || 0), 0);
   const mExpense = txns
     .filter((t) => t.type === 'expense' && t.date && isSameMonth(parseISO(t.date), now))
-    .reduce((s, t) => s + Math.abs(t.amount), 0);
+    .reduce((s, t) => s + Math.abs(Number(t.amount || 0)), 0);
   const netSavings = mIncome - mExpense;
 
   const cards = [

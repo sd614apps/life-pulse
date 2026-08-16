@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { entities } from '@/lib/entities';
 import { format, parseISO } from 'date-fns';
 import { CalendarDays, MapPin, Users } from 'lucide-react';
 
@@ -16,9 +16,15 @@ export default function CalendarTab() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    base44.entities.CalendarEvent.list('event_at', 100)
+    entities.CalendarEvent.list({
+      orderBy: 'event_at:asc',
+      limit: 100,
+    })
       .then((list) => setEvents(list || []))
-      .catch(() => setEvents([]))
+      .catch((err) => {
+        console.error('[CalendarTab.CalendarEvent]', err);
+        setEvents([]);
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -39,7 +45,7 @@ export default function CalendarTab() {
                   <span className="text-sm font-semibold text-foreground">{e.title}</span>
                 </div>
                 <div className="mt-1 text-xs text-muted-foreground">
-                  {format(parseISO(e.event_at), 'EEEE, d MMM yyyy · h:mm a')} · {e.duration_minutes} min
+                  {e.event_at ? format(parseISO(e.event_at), 'EEEE, d MMM yyyy · h:mm a') : '—'} · {e.duration_minutes || 0} min
                 </div>
                 {e.location && (
                   <div className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">

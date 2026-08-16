@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { entities } from '@/lib/entities';
 import { useMoney } from '@/lib/useMoney';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend } from 'recharts';
 
@@ -16,14 +16,22 @@ export default function AssetAllocation() {
   const [holdings, setHoldings] = useState([]);
 
   useEffect(() => {
-    base44.entities.Holding.list().then((list) => setHoldings(list || [])).catch(() => setHoldings([]));
+    entities.Holding.list()
+      .then((list) => setHoldings(list || []))
+      .catch((err) => {
+        console.error('[AssetAllocation.Holding]', err);
+        setHoldings([]);
+      });
   }, []);
 
   const data = useMemo(() => {
     const map = {};
-    holdings.forEach((h) => { map[h.asset_class] = (map[h.asset_class] || 0) + h.balance; });
+    holdings.forEach((h) => {
+      const key = h.asset_class || 'cash';
+      map[key] = (map[key] || 0) + Number(h.balance || 0);
+    });
     return Object.entries(map).map(([k, v]) => ({
-      name: CLASS[k]?.label || k,
+      name: CLASS[k]?.label || k.replace(/_/g, ' '),
       value: v,
       color: CLASS[k]?.color || '#888',
     }));
@@ -38,8 +46,17 @@ export default function AssetAllocation() {
       <div className="relative mt-2 h-[280px]">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
-            <Pie data={data} dataKey="value" nameKey="name" innerRadius={64} outerRadius={96} paddingAngle={2}>
-              {data.map((d, i) => <Cell key={i} fill={d.color} />)}
+            <Pie
+              data={data}
+              dataKey="value"
+              nameKey="name"
+              innerRadius={64}
+              outerRadius={96}
+              paddingAngle={2}
+            >
+              {data.map((d, i) => (
+                <Cell key={i} fill={d.color} />
+              ))}
             </Pie>
             <Tooltip formatter={(v) => money(v)} />
             <Legend />
@@ -52,4 +69,4 @@ export default function AssetAllocation() {
       </div>
     </div>
   );
-};
+}

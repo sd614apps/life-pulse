@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { entities } from '@/lib/entities';
 import { useMoney } from '@/lib/useMoney';
 import { format, parseISO } from 'date-fns';
 import { Search, Plus } from 'lucide-react';
@@ -32,10 +32,21 @@ export default function TransactionHistory() {
   const [open, setOpen] = useState(false);
 
   const load = async () => {
-    try { setTxns(await base44.entities.Transaction.list('-date', 300) || []); }
-    catch { setTxns([]); }
+    try {
+      const list = await entities.Transaction.list({
+        orderBy: 'date:desc',
+        limit: 300,
+      });
+      setTxns(list || []);
+    } catch (err) {
+      console.error('[TransactionHistory.load]', err);
+      setTxns([]);
+    }
   };
-  useEffect(() => { load(); }, []);
+
+  useEffect(() => {
+    load();
+  }, []);
 
   const filtered = useMemo(() => {
     return txns.filter((t) => {
@@ -93,12 +104,14 @@ export default function TransactionHistory() {
             )}
             {filtered.map((t) => (
               <tr key={t.id} className="border-b border-border/40">
-                <td className="whitespace-nowrap py-2.5 pr-3 text-muted-foreground">{format(parseISO(t.date), 'd MMM yyyy')}</td>
+                <td className="whitespace-nowrap py-2.5 pr-3 text-muted-foreground">
+                  {t.date ? format(parseISO(t.date), 'd MMM yyyy') : '—'}
+                </td>
                 <td className="py-2.5 pr-3 font-medium text-foreground">{t.description}</td>
                 <td className="py-2.5 pr-3 capitalize text-muted-foreground">{t.category}</td>
                 <td className="py-2.5 pr-3 text-muted-foreground">{t.family_member || '—'}</td>
                 <td className={`py-2.5 pr-3 text-right font-semibold ${t.type === 'income' ? 'text-emerald-600' : 'text-foreground'}`}>
-                  {t.type === 'income' ? '+' : '-'}{money(Math.abs(t.amount))}
+                  {t.type === 'income' ? '+' : '-'}{money(Math.abs(Number(t.amount || 0)))}
                 </td>
               </tr>
             ))}

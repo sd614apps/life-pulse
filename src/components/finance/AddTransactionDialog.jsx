@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { entities } from '@/lib/entities';
 import { useToast } from '@/components/ui/use-toast';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -37,7 +37,10 @@ export default function AddTransactionDialog({ open, onOpenChange, onAdded }) {
     setMember('Eleanor Hayes');
     setDate(new Date().toISOString().slice(0, 10));
   };
-  const close = () => { onOpenChange(false); setTimeout(reset, 200); };
+  const close = () => {
+    onOpenChange(false);
+    setTimeout(reset, 200);
+  };
 
   const submit = async (e) => {
     e.preventDefault();
@@ -45,7 +48,7 @@ export default function AddTransactionDialog({ open, onOpenChange, onAdded }) {
     if (!description.trim() || !amt) return;
     setSaving(true);
     try {
-      await base44.entities.Transaction.create({
+      await entities.Transaction.create({
         description,
         amount: type === 'expense' ? -amt : amt,
         category,
@@ -57,7 +60,8 @@ export default function AddTransactionDialog({ open, onOpenChange, onAdded }) {
       toast({ title: 'Transaction added' });
       onAdded?.();
       close();
-    } catch {
+    } catch (err) {
+      console.error('[AddTransactionDialog.submit]', err);
       toast({ title: 'Could not save', variant: 'destructive' });
     } finally {
       setSaving(false);
@@ -68,23 +72,44 @@ export default function AddTransactionDialog({ open, onOpenChange, onAdded }) {
     <Dialog open={open} onOpenChange={(o) => (o ? onOpenChange(true) : close())}>
       <DialogContent className="border-border/70 p-0 sm:max-w-md">
         <div className="border-b border-border/70 bg-card px-6 py-5">
-          <DialogTitle className="font-heading text-lg font-semibold text-foreground">Add transaction</DialogTitle>
-          <DialogDescription className="mt-1 text-sm text-muted-foreground">Record a new income or expense.</DialogDescription>
+          <DialogTitle className="font-heading text-lg font-semibold text-foreground">
+            Add transaction
+          </DialogTitle>
+          <DialogDescription className="mt-1 text-sm text-muted-foreground">
+            Record a new income or expense.
+          </DialogDescription>
         </div>
         <form onSubmit={submit} className="space-y-4 px-6 py-6">
           <div className="space-y-1.5">
             <Label htmlFor="t-desc">Description</Label>
-            <Input id="t-desc" value={description} onChange={(e) => setDescription(e.target.value)} className="min-h-[48px]" required autoFocus />
+            <Input
+              id="t-desc"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="min-h-[48px]"
+              required
+              autoFocus
+            />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="t-amt">Amount</Label>
-              <Input id="t-amt" type="number" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} className="min-h-[48px]" required />
+              <Input
+                id="t-amt"
+                type="number"
+                step="0.01"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                className="min-h-[48px]"
+                required
+              />
             </div>
             <div className="space-y-1.5">
               <Label>Type</Label>
               <Select value={type} onValueChange={setType}>
-                <SelectTrigger className="min-h-[48px]"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="min-h-[48px]">
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="expense">Expense</SelectItem>
                   <SelectItem value="income">Income</SelectItem>
@@ -96,27 +121,50 @@ export default function AddTransactionDialog({ open, onOpenChange, onAdded }) {
             <div className="space-y-1.5">
               <Label>Category</Label>
               <Select value={category} onValueChange={setCategory}>
-                <SelectTrigger className="min-h-[48px]"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="min-h-[48px]">
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
-                  {CATS.map((c) => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+                  {CATS.map((c) => (
+                    <SelectItem key={c.value} value={c.value}>
+                      {c.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">
               <Label>Member</Label>
               <Select value={member} onValueChange={setMember}>
-                <SelectTrigger className="min-h-[48px]"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="min-h-[48px]">
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
-                  {MEMBERS.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+                  {MEMBERS.map((m) => (
+                    <SelectItem key={m} value={m}>
+                      {m}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="t-date">Date</Label>
-            <Input id="t-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} className="min-h-[48px]" required />
+            <Input
+              id="t-date"
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="min-h-[48px]"
+              required
+            />
           </div>
-          <Button type="submit" disabled={saving} className="min-h-[48px] w-full gap-2 bg-brand text-brand-foreground hover:bg-brand/90">
+          <Button
+            type="submit"
+            disabled={saving}
+            className="min-h-[48px] w-full gap-2 bg-brand text-brand-foreground hover:bg-brand/90"
+          >
             {saving && <Loader2 className="h-4 w-4 animate-spin" />}
             {saving ? 'Saving…' : 'Save transaction'}
           </Button>

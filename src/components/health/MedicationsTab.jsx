@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { entities } from '@/lib/entities';
 import { useToast } from '@/components/ui/use-toast';
 import { Check, Clock } from 'lucide-react';
 
@@ -17,17 +17,27 @@ export default function MedicationsTab() {
 
   const load = async () => {
     try {
-      setMeds(await base44.entities.Medication.list() || []);
-    } catch {
+      const list = await entities.Medication.list();
+      setMeds(list || []);
+    } catch (err) {
+      console.error('[MedicationsTab.load]', err);
       setMeds([]);
     }
   };
-  useEffect(() => { load(); }, []);
+
+  useEffect(() => {
+    load();
+  }, []);
 
   const markTaken = async (m) => {
-    await base44.entities.Medication.update(m.id, { taken: !m.taken });
-    toast({ title: m.taken ? 'Marked as not taken' : 'Marked as taken' });
-    load();
+    try {
+      await entities.Medication.update(m.id, { taken: !m.taken });
+      toast({ title: m.taken ? 'Marked as not taken' : 'Marked as taken' });
+      load();
+    } catch (err) {
+      console.error('[MedicationsTab.markTaken]', err);
+      toast({ title: 'Could not update status', variant: 'destructive' });
+    }
   };
 
   const sorted = [...meds].sort((a, b) => ORDER.indexOf(a.timing) - ORDER.indexOf(b.timing));

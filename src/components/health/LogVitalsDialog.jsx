@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { entities } from '@/lib/entities';
 import { useToast } from '@/components/ui/use-toast';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -31,7 +31,7 @@ export default function LogVitalsDialog({ metric, open, onOpenChange, onLogged }
     e.preventDefault();
     setSaving(true);
     try {
-      await base44.entities.HealthLog.create({
+      await entities.HealthLog.create({
         member_name: 'Eleanor Hayes',
         metric_type: metric,
         value: Number(value),
@@ -45,7 +45,8 @@ export default function LogVitalsDialog({ metric, open, onOpenChange, onLogged }
       onLogged?.();
       onOpenChange(false);
       reset();
-    } catch {
+    } catch (err) {
+      console.error('[LogVitalsDialog.submit]', err);
       toast({ title: 'Could not save', variant: 'destructive' });
     } finally {
       setSaving(false);

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { entities } from '@/lib/entities';
 import { useMoney } from '@/lib/useMoney';
 import { format, parseISO } from 'date-fns';
 import {
@@ -11,15 +11,27 @@ export default function NetWorthChart() {
   const [points, setPoints] = useState([]);
 
   useEffect(() => {
-    base44.entities.NetWorthPoint.list('month', 50).then((list) => setPoints(list || [])).catch(() => setPoints([]));
+    entities.NetWorthPoint.list({
+      orderBy: 'month:asc',
+      limit: 50,
+    })
+      .then((list) => setPoints(list || []))
+      .catch((err) => {
+        console.error('[NetWorthChart.NetWorthPoint]', err);
+        setPoints([]);
+      });
   }, []);
 
-  const data = points.map((p) => ({
-    label: format(parseISO(`${p.month}-01`), "MMM ''yy"),
-    assets: p.assets,
-    liabilities: p.liabilities,
-    net: p.assets - p.liabilities,
-  }));
+  const data = points.map((p) => {
+    const assets = Number(p.assets || 0);
+    const liabilities = Number(p.liabilities || 0);
+    return {
+      label: p.month ? format(parseISO(`${p.month}-01`), "MMM ''yy") : '—',
+      assets,
+      liabilities,
+      net: assets - liabilities,
+    };
+  });
 
   const yFmt = (v) => (privacyMode ? '••••' : `$${(v / 1000).toFixed(0)}k`);
 

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { entities } from '@/lib/entities';
 import { format, parseISO } from 'date-fns';
 import {
   ResponsiveContainer, LineChart, Line, AreaChart, Area, BarChart, Bar,
@@ -83,14 +83,19 @@ export default function VitalsTab() {
   const load = async () => {
     setLoading(true);
     try {
-      const list = await base44.entities.HealthLog.list('-logged_at', 100);
+      const list = await entities.HealthLog.list({
+        orderBy: 'logged_at:desc',
+        limit: 100,
+      });
       setItems(list || []);
-    } catch {
+    } catch (err) {
+      console.error('[VitalsTab.load]', err);
       setItems([]);
     } finally {
       setLoading(false);
     }
   };
+
   useEffect(() => { load(); }, []);
 
   const chartData = useMemo(() => {
@@ -99,10 +104,10 @@ export default function VitalsTab() {
     items.filter((it) => it.status === 'logged').forEach((it) => {
       if (byMetric[it.metric_type]) {
         byMetric[it.metric_type].push({
-          date: format(parseISO(it.logged_at), 'MM/dd'),
+          date: it.logged_at ? format(parseISO(it.logged_at), 'MM/dd') : '—',
           value: it.value,
           diastolic: it.secondary_value,
-          sortKey: new Date(it.logged_at).getTime(),
+          sortKey: it.logged_at ? new Date(it.logged_at).getTime() : 0,
         });
       }
     });
@@ -158,7 +163,7 @@ export default function VitalsTab() {
                   <div className="min-w-0">
                     <div className="text-sm font-medium text-foreground">{m?.label}</div>
                     <div className="text-xs text-muted-foreground">
-                      {it.member_name} · {format(parseISO(it.logged_at), 'd MMM yyyy, h:mm a')}
+                      {it.member_name} · {it.logged_at ? format(parseISO(it.logged_at), 'd MMM yyyy, h:mm a') : '—'}
                     </div>
                   </div>
                   <span className="ml-auto text-sm font-semibold text-foreground">
