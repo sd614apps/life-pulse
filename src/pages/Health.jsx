@@ -10,7 +10,7 @@ import { HeartPulse } from 'lucide-react';
 export default function Health() {
   return (
     <div className="min-h-screen bg-background">
-      <ModuleHeader icon={HeartPulse} title="Health & Wellness" description="Vitals, medications, appointments & records" cover="https://media.base44.com/images/public/6a737f97d9e3ddd06cf02735/3374a2875_generated_image.png" />
+      <ModuleHeader icon={HeartPulse} title="Health & Wellness" description="Vitals, medications, appointments & records" cover="/images/health-tile-cover.png" />
       <main className="mx-auto max-w-7xl px-4 py-6 pb-28 sm:px-6 lg:px-8">
         <Tabs defaultValue="vitals">
           <TabsList className="flex-wrap">

@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { supabase } from '@/lib/supabaseClient';
 import { useNavigate } from 'react-router-dom';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import ActionCenter from '@/components/dashboard/ActionCenter';
@@ -15,12 +15,32 @@ import { useFeatureToggles } from '@/lib/useFeatureToggles';
 export default function Dashboard() {
   const { isEnabled } = useFeatureToggles();
   const navigate = useNavigate();
-  useEffect(() => { base44.functions.invoke('syncAlertNotifications', {}).catch(() => {}); }, []);
+
   useEffect(() => {
-    base44.auth.me().then((u) => {
-      if (u && u.role !== 'admin' && u.data?.onboarding_complete !== true) navigate('/onboarding');
-    }).catch(() => {});
+    supabase.functions.invoke('syncAlertNotifications', {}).catch((err) => {
+      console.error('[Dashboard.syncAlertNotifications]', err);
+    });
+  }, []);
+
+  useEffect(() => {
+    supabase.auth.getUser()
+      .then(({ data: { user }, error }) => {
+        if (error || !user) return;
+
+        const isAdmin =
+          user.role === 'admin' ||
+          user.app_metadata?.role === 'admin' ||
+          user.user_metadata?.role === 'admin';
+
+        if (!isAdmin && user.user_metadata?.onboarding_complete !== true) {
+          navigate('/onboarding');
+        }
+      })
+      .catch((err) => {
+        console.error('[Dashboard.getUser]', err);
+      });
   }, [navigate]);
+
   return (
     <div className="min-h-screen bg-background">
       <DashboardHeader />

@@ -1,77 +1,101 @@
-# Base44 Project
+# LifePulse
 
-Use this repository to run and edit the app locally, then publish changes back through Base44.
+LifePulse is a modern family life management and security dashboard application built with React, Vite, Tailwind CSS, and Supabase.
 
-Any change pushed to the repo will also be reflected in the Base44 Builder.
+---
+
+## Features
+
+- **Household Management:** Create or join family spaces, invite members, and assign custom family roles.
+- **Security & Privacy Audit:** Configurable security tiers (Standard, High-Privacy, Maximum Vault Isolation), auto-lock timeouts, session tracking, and 2FA support.
+- **Integrated Hubs:** Dashboard tiles and dedicated management for Health, Finance, Investments, Travel, Household Calendars, and Vaults.
+- **Admin Control Portal:** Role-based system admin portal with feature toggles, platform stats, and zero-knowledge audit logging.
+- **Zero-Knowledge Privacy:** Client-side data masking and password hashing using PBKDF2/SHA-256.
+
+---
 
 ## Prerequisites
 
-1. Clone the repository using the project's Git URL.
-2. Navigate to the project directory.
-3. Install dependencies: `npm install`.
-4. Install the Base44 CLI: `npm install -g base44@latest`.
+- [Node.js](https://nodejs.org/) (version 18.x or later)
+- [npm](https://www.npmjs.com/) or [pnpm](https://pnpm.io/)
+- A [Supabase](https://supabase.com/) project (or local Supabase instance)
 
-See the [Base44 CLI docs](https://docs.base44.com/developers/references/cli/get-started/overview) if you want to run Base44 commands directly.
+---
 
-## Run Locally
+## Getting Started
 
-Run the full local development environment from the project root:
+### 1. Clone the repository
 
 ```bash
-base44 dev
+git clone <repository-url>
+cd lifepulse
 ```
 
-`base44 dev` starts the local Base44 development backend and, when this app is configured for it, also starts the frontend dev server for you. Use the frontend URL printed by the command.
+### 2. Install dependencies
 
-For example, when the Base44 project config includes a `serveCommand`, `base44 dev` can launch the frontend too:
-
-```json5
-{
-  "site": {
-    "serveCommand": "npm run dev"
-  }
-}
+```bash
+npm install
 ```
 
-In a Base44 project this lives in `base44/config.jsonc`.
+### 3. Configure environment variables
 
-## Run Only The Frontend
+Create a `.env.local` or `.env` file in the root directory and add your environment configuration:
 
-If you only want to work on the frontend against the hosted Base44 backend, run:
+```env
+# Supabase Configuration
+VITE_SUPABASE_URL=[https://your-project.supabase.co](https://your-project.supabase.co)
+VITE_SUPABASE_ANON_KEY=your-anon-key
+
+# App Configuration
+VITE_APP_ID=your_app_id
+VITE_APP_BASE_URL=http://localhost:5173
+```
+
+### 4. Run the development server
 
 ```bash
 npm run dev
 ```
 
-Open the local URL printed by Vite.
+Open the local URL printed in your terminal (typically `http://localhost:5173`) in your browser.
 
-## Use The Hosted Backend
+---
 
-For frontend-only development, create or update `.env.local` in the project root:
+## Available Scripts
 
-```bash
-VITE_BASE44_APP_ID=your_app_id
-VITE_BASE44_APP_BASE_URL=https://your-app.base44.app
+- `npm run dev`: Starts the Vite development server.
+- `npm run build`: Compiles and bundles the application for production into `dist/`.
+- `npm run preview`: Locally previews the production build.
+- `npm run lint`: Runs ESLint across the codebase.
+
+---
+
+## Project Structure
+
+```text
+├── public/                # Static assets, icons, and web manifest
+├── src/
+│   ├── api/               # API helpers and data-fetching interfaces
+│   ├── components/        # Reusable UI components & feature modules
+│   │   ├── admin/         # System admin portal components
+│   │   ├── dashboard/     # Dashboard widgets & overview tiles
+│   │   ├── security/      # Security score & session management
+│   │   ├── travel/        # Itinerary and packing list widgets
+│   │   └── ui/            # Base UI primitives (buttons, inputs, dialogs)
+│   ├── hooks/             # Custom React hooks (e.g. useSize)
+│   ├── lib/               # Utility functions, crypto helpers, Supabase client
+│   ├── pages/             # Application route views & screens
+│   ├── App.jsx            # Top-level router & application providers
+│   └── main.jsx           # Application entry point
+├── index.html             # HTML entry point
+├── tailwind.config.js     # Tailwind CSS configuration
+└── vite.config.js         # Vite build configuration
 ```
 
-`VITE_BASE44_APP_ID` identifies the Base44 app.
+---
 
-`VITE_BASE44_APP_BASE_URL` tells the Base44 Vite plugin where to send local `/api` requests. Point it at your deployed Base44 app URL when you want the local frontend to use the hosted backend.
+## Security & Auth Notes
 
-When you use `base44 dev`, the command injects the local Base44 values for you, so `.env.local` is mainly needed for frontend-only workflows.
-
-## Publish Your Changes
-
-After pushing your changes to git, open the Base44 dashboard and publish the app:
-
-```bash
-base44 dashboard open
-```
-
-## Docs & Support
-
-Documentation: [https://docs.base44.com/Integrations/Using-GitHub](https://docs.base44.com/Integrations/Using-GitHub)
-
-Base44 CLI command reference: [https://docs.base44.com/developers/references/cli/commands/introduction](https://docs.base44.com/developers/references/cli/commands/introduction)
-
-Support: [https://app.base44.com/support](https://app.base44.com/support)
+- Authentication is powered by Supabase Auth with email/password, OTP verification, and OAuth providers (Google).
+- Administrative actions require an explicit `admin` role and an encrypted admin passphrase unlock.
+- Never commit `.env.local` or production API keys to source control.

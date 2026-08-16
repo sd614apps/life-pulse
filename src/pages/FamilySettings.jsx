@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
+import { supabase } from '@/lib/supabaseClient';
+import { entities } from '@/lib/entities';
 import { useToast } from '@/components/ui/use-toast';
 import ModuleHeader from '@/components/ModuleHeader';
 import { Button } from '@/components/ui/button';
@@ -29,11 +30,11 @@ export default function FamilySettings() {
 
   const load = async () => {
     const [profiles, cal, tasks, contacts, budgets] = await Promise.all([
-      base44.entities.Profile.list().catch(() => []),
-      base44.entities.CalendarEvent.list().catch(() => []),
-      base44.entities.SharedTask.list().catch(() => []),
-      base44.entities.EmergencyContact.list().catch(() => []),
-      base44.entities.BudgetCategory.list().catch(() => []),
+      entities.Profile.list().catch(() => []),
+      entities.CalendarEvent.list().catch(() => []),
+      entities.SharedTask.list().catch(() => []),
+      entities.EmergencyContact.list().catch(() => []),
+      entities.BudgetCategory.list().catch(() => []),
     ]);
     setMembers(profiles || []);
     setShared({
@@ -47,12 +48,22 @@ export default function FamilySettings() {
   useEffect(() => {
     (async () => {
       try {
-        const u = await base44.auth.me();
-        setUser(u);
-        const isFamilyAdmin = u?.data?.family_role === 'family_admin' || u?.role === 'admin';
+        const { data: { user: currentUser }, error } = await supabase.auth.getUser();
+        if (error || !currentUser) {
+          navigate('/login');
+          return;
+        }
+
+        setUser(currentUser);
+        const isFamilyAdmin =
+          currentUser.user_metadata?.family_role === 'family_admin' ||
+          currentUser.role === 'admin' ||
+          currentUser.app_metadata?.role === 'admin';
+
         setAllowed(isFamilyAdmin);
         if (isFamilyAdmin) await load();
-      } catch {
+      } catch (err) {
+        console.error('[FamilySettings.init]', err);
         navigate('/login');
       } finally {
         setChecking(false);
@@ -62,10 +73,11 @@ export default function FamilySettings() {
 
   const setRole = async (id, role) => {
     try {
-      await base44.entities.Profile.update(id, { family_role: role });
+      await entities.Profile.update(id, { family_role: role });
       setMembers((prev) => prev.map((m) => (m.id === id ? { ...m, family_role: role } : m)));
       toast({ title: 'Family role updated' });
-    } catch {
+    } catch (err) {
+      console.error('[FamilySettings.setRole]', err);
       toast({ title: 'Update failed', variant: 'destructive' });
     }
   };
@@ -73,10 +85,11 @@ export default function FamilySettings() {
   const removeMember = async (id) => {
     if (!confirm('Remove this family member profile?')) return;
     try {
-      await base44.entities.Profile.delete(id);
+      await entities.Profile.delete(id);
       setMembers((prev) => prev.filter((m) => m.id !== id));
       toast({ title: 'Member removed' });
-    } catch {
+    } catch (err) {
+      console.error('[FamilySettings.removeMember]', err);
       toast({ title: 'Remove failed', variant: 'destructive' });
     }
   };
@@ -85,17 +98,28 @@ export default function FamilySettings() {
     e.preventDefault();
     setInviting(true);
     try {
-      await base44.users.inviteUser(inviteEmail, 'user');
-      await base44.entities.AuditLog.create({
+      const { error: inviteError } = await supabase.auth.admin?.inviteUserByEmail
+        ? await supabase.auth.admin.inviteUserByEmail(inviteEmail, {
+            data: { family_role: inviteRole },
+          })
+        : await supabase.functions.invoke('inviteUser', {
+            body: { email: inviteEmail, role: inviteRole },
+          });
+
+      if (inviteError) throw inviteError;
+
+      await entities.AuditLog.create({
         event_type: 'access',
         message: `Family member invited: ${inviteEmail} (${inviteRole})`,
         actor: user?.email || 'admin',
         severity: 'info',
         metadata: inviteRole,
       }).catch(() => {});
+
       toast({ title: `Invitation sent to ${inviteEmail}` });
       setInviteEmail('');
     } catch (err) {
+      console.error('[FamilySettings.invite]', err);
       toast({ title: 'Invitation failed', description: err?.message || '', variant: 'destructive' });
     } finally {
       setInviting(false);
@@ -135,17 +159,34 @@ export default function FamilySettings() {
         </div>
 
         <div className="rounded-2xl border border-border/70 bg-card p-5">
-          <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground"><UserPlus className="h-4 w-4" /> Invite a family member</h3>
+          <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+            <UserPlus className="h-4 w-4" /> Invite a family member
+          </h3>
           <form onSubmit={invite} className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
             <div className="flex-1 space-y-1.5">
               <Label htmlFor="ie">Email</Label>
-              <Input id="ie" type="email" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} className="min-h-[44px]" required />
+              <Input
+                id="ie"
+                type="email"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                className="min-h-[44px]"
+                required
+              />
             </div>
             <div className="w-full space-y-1.5 sm:w-48">
               <Label htmlFor="ir">Family role</Label>
               <Select value={inviteRole} onValueChange={setInviteRole}>
-                <SelectTrigger id="ir" className="min-h-[44px]"><SelectValue /></SelectTrigger>
-                <SelectContent>{ROLES.map((r) => <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>)}</SelectContent>
+                <SelectTrigger id="ir" className="min-h-[44px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ROLES.map((r) => (
+                    <SelectItem key={r.value} value={r.value}>
+                      {r.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
               </Select>
             </div>
             <Button type="submit" disabled={inviting} className="min-h-[44px] gap-2">
@@ -157,11 +198,19 @@ export default function FamilySettings() {
         <div className="rounded-2xl border border-border/70 bg-card p-5">
           <h3 className="text-sm font-semibold text-foreground">Household members</h3>
           <div className="mt-4 space-y-2">
-            {members.length === 0 && <p className="py-4 text-center text-sm text-muted-foreground">No family members yet.</p>}
+            {members.length === 0 && (
+              <p className="py-4 text-center text-sm text-muted-foreground">No family members yet.</p>
+            )}
             {members.map((m) => (
-              <div key={m.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/70 p-4">
+              <div
+                key={m.id}
+                className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/70 p-4"
+              >
                 <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold text-white" style={{ background: m.avatar_color || '#0f766e' }}>
+                  <div
+                    className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold text-white"
+                    style={{ background: m.avatar_color || '#0f766e' }}
+                  >
                     {(m.display_name || '?').charAt(0)}
                   </div>
                   <div>
@@ -171,8 +220,16 @@ export default function FamilySettings() {
                 </div>
                 <div className="flex items-center gap-2">
                   <Select value={m.family_role || 'family_member'} onValueChange={(v) => setRole(m.id, v)}>
-                    <SelectTrigger className="h-9 w-44"><SelectValue /></SelectTrigger>
-                    <SelectContent>{ROLES.map((r) => <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>)}</SelectContent>
+                    <SelectTrigger className="h-9 w-44">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ROLES.map((r) => (
+                        <SelectItem key={r.value} value={r.value}>
+                          {r.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
                   </Select>
                   <Button variant="ghost" size="icon" onClick={() => removeMember(m.id)} aria-label="Remove member">
                     <Trash2 className="h-4 w-4 text-destructive" />
@@ -190,7 +247,10 @@ export default function FamilySettings() {
 function SharedStat({ icon: Icon, label, value }) {
   return (
     <div className="rounded-2xl border border-border/70 bg-card p-4">
-      <div className="flex items-center gap-2 text-muted-foreground"><Icon className="h-4 w-4" /><span className="text-[11px] font-medium uppercase tracking-wide">{label}</span></div>
+      <div className="flex items-center gap-2 text-muted-foreground">
+        <Icon className="h-4 w-4" />
+        <span className="text-[11px] font-medium uppercase tracking-wide">{label}</span>
+      </div>
       <p className="mt-2 font-heading text-2xl font-semibold text-foreground">{value}</p>
     </div>
   );

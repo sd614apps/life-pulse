@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { entities } from '@/lib/entities';
 import ModuleHeader from '@/components/ModuleHeader';
 import SecurityScore from '@/components/security/SecurityScore';
 import SecurityControls from '@/components/security/SecurityControls';
@@ -11,15 +11,21 @@ export default function Security() {
 
   const load = useCallback(async () => {
     try {
-      const list = (await base44.entities.AppConfiguration.filter({ category: 'security' })) || [];
+      const list = (await entities.AppConfiguration.filter({ category: 'security' })) || [];
       const map = {};
-      list.forEach((s) => { if (!map[s.config_key]) map[s.config_key] = s; });
+      list.forEach((s) => {
+        if (!map[s.config_key]) map[s.config_key] = s;
+      });
       setSettings(map);
-    } catch {
+    } catch (err) {
+      console.error('[Security.load]', err);
       setSettings({});
     }
   }, []);
-  useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const score = (() => {
     const v = (k) => settings[k]?.config_value;
@@ -36,11 +42,17 @@ export default function Security() {
 
   return (
     <div className="min-h-screen bg-background">
-      <ModuleHeader icon={ShieldCheck} title="Security & Privacy Audit Center" description="Account protection & access logs" cover="https://media.base44.com/images/public/6a737f97d9e3ddd06cf02735/ae67d6e12_generated_image.png" />
+      <ModuleHeader
+        icon={ShieldCheck}
+        title="Security & Privacy Audit Center"
+        description="Account protection & access logs"
+      />
       <main className="mx-auto max-w-7xl space-y-6 px-4 py-6 pb-28 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           <SecurityScore score={score} />
-          <div className="lg:col-span-2"><SecurityControls settings={settings} reload={load} /></div>
+          <div className="lg:col-span-2">
+            <SecurityControls settings={settings} reload={load} />
+          </div>
         </div>
         <SessionTable />
       </main>

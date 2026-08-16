@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
+import { entities } from '@/lib/entities';
 import ModuleHeader from '@/components/ModuleHeader';
 import ItineraryTimeline from '@/components/travel/ItineraryTimeline';
 import PackingList from '@/components/travel/PackingList';
@@ -15,9 +15,12 @@ export default function TripDetail() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    base44.entities.Trip.get(id)
+    entities.Trip.get(id)
       .then(setTrip)
-      .catch(() => setTrip(null))
+      .catch((err) => {
+        console.error('[TripDetail.entities.Trip.get]', err);
+        setTrip(null);
+      })
       .finally(() => setLoading(false));
   }, [id]);
 
@@ -43,7 +46,13 @@ export default function TripDetail() {
 
   return (
     <div className="min-h-screen bg-background">
-      <ModuleHeader icon={Plane} title={trip.title} description={`${trip.destination} · ${format(parseISO(trip.start_date), 'd MMM yyyy')}`} />
+      <ModuleHeader
+        icon={Plane}
+        title={trip.title}
+        description={`${trip.destination || ''} · ${
+          trip.start_date ? format(parseISO(trip.start_date), 'd MMM yyyy') : ''
+        }`}
+      />
       <main className="mx-auto max-w-5xl space-y-6 px-4 py-6 pb-28 sm:px-6 lg:px-8">
         <Button variant="outline" onClick={() => navigate('/travel')} className="gap-2">
           <ArrowLeft className="h-4 w-4" /> All trips

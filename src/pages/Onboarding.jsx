@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
+import { supabase } from '@/lib/supabaseClient';
+import { entities } from '@/lib/entities';
 import ModuleHeader from '@/components/ModuleHeader';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -59,13 +60,35 @@ export default function Onboarding() {
   const [err, setErr] = useState('');
 
   useEffect(() => {
-    base44.auth.me().then((u) => {
-      setName(u?.data?.display_name || sessionStorage.getItem('lp-onboard-name') || '');
-    }).catch(() => navigate('/login'));
+    supabase.auth.getUser()
+      .then(({ data: { user }, error }) => {
+        if (error || !user) {
+          navigate('/login');
+          return;
+        }
+        setName(
+          user.user_metadata?.display_name ||
+          user.user_metadata?.name ||
+          sessionStorage.getItem('lp-onboard-name') ||
+          ''
+        );
+      })
+      .catch((err) => {
+        console.error('[Onboarding.getUser]', err);
+        navigate('/login');
+      });
   }, [navigate]);
 
   const persist = async (next) => {
-    await base44.auth.updateMe({ data: next });
+    try {
+      const { error } = await supabase.auth.updateUser({
+        data: next,
+      });
+      if (error) throw error;
+    } catch (err) {
+      console.error('[Onboarding.persist]', err);
+      throw err;
+    }
   };
 
   const finishFamily = async () => {
@@ -74,8 +97,8 @@ export default function Onboarding() {
       let familyId = '';
       let familyRole = 'family_member';
       if (familyMode === 'create' && householdName.trim()) {
-        const fam = await base44.entities.Families.create({ name: householdName.trim() });
-        familyId = fam.id;
+        const fam = await entities.Families.create({ name: householdName.trim() });
+        familyId = fam?.id || '';
         familyRole = 'family_admin';
       } else if (familyMode === 'join' && inviteCode.trim()) {
         familyId = inviteCode.trim();
@@ -85,13 +108,19 @@ export default function Onboarding() {
       setPrefs(next);
       await persist(next);
       if (name) {
-        await base44.entities.Profile.create({
-          display_name: name, role: 'primary', view_mode: 'standard',
-          family_id: familyId, family_role: familyRole,
-        }).catch(() => {});
+        await entities.Profile.create({
+          display_name: name,
+          role: 'primary',
+          view_mode: 'standard',
+          family_id: familyId,
+          family_role: familyRole,
+        }).catch((err) => {
+          console.error('[Onboarding.Profile.create]', err);
+        });
       }
       setStep('security');
     } catch (e) {
+      console.error('[Onboarding.finishFamily]', e);
       toast({ title: 'Something went wrong', variant: 'destructive' });
     } finally {
       setBusy(false);
@@ -105,6 +134,9 @@ export default function Onboarding() {
       setPrefs(next);
       await persist(next);
       setStep('twofa');
+    } catch (e) {
+      console.error('[Onboarding.finishSecurity]', e);
+      toast({ title: 'Failed to save security settings', variant: 'destructive' });
     } finally {
       setBusy(false);
     }
@@ -119,6 +151,9 @@ export default function Onboarding() {
       const next = { ...prefs, twofa_enrolled: true, backup_codes: codes, onboarding_complete: true };
       setPrefs(next);
       await persist(next);
+    } catch (e) {
+      console.error('[Onboarding.complete2fa]', e);
+      toast({ title: 'Failed to complete 2FA setup', variant: 'destructive' });
     } finally {
       setBusy(false);
     }
@@ -126,22 +161,33 @@ export default function Onboarding() {
 
   const verifyTestCode = () => {
     setErr('');
-    if (!/^\d{6}$/.test(testCode)) { setErr('Enter the 6-digit code shown in your app.'); return; }
+    if (!/^\d{6}$/.test(testCode)) {
+      setErr('Enter the 6-digit code shown in your app.');
+      return;
+    }
     complete2fa();
   };
 
   const remindLater = async () => {
     setBusy(true);
     try {
-      await base44.entities.Notification.create({
+      await entities.Notification.create({
         title: 'Set up two-factor authentication',
         description: 'Add an extra layer of security to your account when you have a moment.',
-        severity: 'pending', category: 'family', status: 'active', target_path: '/onboarding',
-      }).catch(() => {});
+        severity: 'pending',
+        category: 'family',
+        status: 'active',
+        target_path: '/onboarding',
+      }).catch((err) => {
+        console.error('[Onboarding.Notification.create]', err);
+      });
       const next = { ...prefs, twofa_enrolled: false, onboarding_complete: true };
       setPrefs(next);
       await persist(next);
       navigate('/dashboard');
+    } catch (e) {
+      console.error('[Onboarding.remindLater]', e);
+      toast({ title: 'Failed to proceed', variant: 'destructive' });
     } finally {
       setBusy(false);
     }
@@ -150,11 +196,15 @@ export default function Onboarding() {
   const finishBackup = () => navigate('/dashboard');
 
   const downloadBackup = () => {
-    const text = 'LifePulse — 2FA Backup Recovery Codes\nKeep these somewhere safe. Each can be used once.\n\n' + backupCodes.join('\n');
+    const text =
+      'LifePulse — 2FA Backup Recovery Codes\nKeep these somewhere safe. Each can be used once.\n\n' +
+      backupCodes.join('\n');
     const blob = new Blob([text], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url; a.download = 'lifepulse-backup-codes.txt'; a.click();
+    a.href = url;
+    a.download = 'lifepulse-backup-codes.txt';
+    a.click();
     URL.revokeObjectURL(url);
   };
 
@@ -172,10 +222,24 @@ export default function Onboarding() {
             const active = i === stepIndex;
             return (
               <li key={s.key} className="flex flex-1 items-center gap-2">
-                <div className={`flex h-9 w-9 items-center justify-center rounded-full border ${active ? 'border-brand bg-brand text-brand-foreground' : done ? 'border-brand bg-brand/10 text-brand' : 'border-border text-muted-foreground'}`}>
+                <div
+                  className={`flex h-9 w-9 items-center justify-center rounded-full border ${
+                    active
+                      ? 'border-brand bg-brand text-brand-foreground'
+                      : done
+                      ? 'border-brand bg-brand/10 text-brand'
+                      : 'border-border text-muted-foreground'
+                  }`}
+                >
                   {done ? <Check className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
                 </div>
-                <span className={`hidden text-xs font-medium sm:inline ${active ? 'text-foreground' : 'text-muted-foreground'}`}>{s.label}</span>
+                <span
+                  className={`hidden text-xs font-medium sm:inline ${
+                    active ? 'text-foreground' : 'text-muted-foreground'
+                  }`}
+                >
+                  {s.label}
+                </span>
                 {i < STEPS.length - 1 && <div className="mx-1 h-px flex-1 bg-border" />}
               </li>
             );
@@ -185,14 +249,28 @@ export default function Onboarding() {
         {step === 'family' && (
           <div className="rounded-2xl border border-border/70 bg-card p-6">
             <h2 className="font-heading text-lg font-semibold text-foreground">Set up your household</h2>
-            <p className="mt-1 text-sm text-muted-foreground">Create a new household and become its Family Admin, or join an existing one with an invite code.</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Create a new household and become its Family Admin, or join an existing one with an invite code.
+            </p>
             <div className="mt-5 grid grid-cols-2 gap-3">
-              <button onClick={() => setFamilyMode('create')} className={`rounded-xl border p-4 text-left ${familyMode === 'create' ? 'border-brand bg-brand/5' : 'border-border/70'}`}>
+              <button
+                type="button"
+                onClick={() => setFamilyMode('create')}
+                className={`rounded-xl border p-4 text-left ${
+                  familyMode === 'create' ? 'border-brand bg-brand/5' : 'border-border/70'
+                }`}
+              >
                 <Home className="h-5 w-5 text-brand" />
                 <p className="mt-2 text-sm font-medium text-foreground">Create a new household</p>
                 <p className="text-xs text-muted-foreground">You'll be the Family Admin.</p>
               </button>
-              <button onClick={() => setFamilyMode('join')} className={`rounded-xl border p-4 text-left ${familyMode === 'join' ? 'border-brand bg-brand/5' : 'border-border/70'}`}>
+              <button
+                type="button"
+                onClick={() => setFamilyMode('join')}
+                className={`rounded-xl border p-4 text-left ${
+                  familyMode === 'join' ? 'border-brand bg-brand/5' : 'border-border/70'
+                }`}
+              >
                 <Users className="h-5 w-5 text-brand" />
                 <p className="mt-2 text-sm font-medium text-foreground">Join an existing household</p>
                 <p className="text-xs text-muted-foreground">Use a household invite code.</p>
@@ -201,16 +279,34 @@ export default function Onboarding() {
             {familyMode === 'create' ? (
               <div className="mt-4 space-y-1.5">
                 <Label htmlFor="hh">Household name</Label>
-                <Input id="hh" value={householdName} onChange={(e) => setHouseholdName(e.target.value)} placeholder="The Hayes Family" className="min-h-[48px]" />
+                <Input
+                  id="hh"
+                  value={householdName}
+                  onChange={(e) => setHouseholdName(e.target.value)}
+                  placeholder="The Hayes Family"
+                  className="min-h-[48px]"
+                />
               </div>
             ) : (
               <div className="mt-4 space-y-1.5">
                 <Label htmlFor="ic">Household invite code</Label>
-                <Input id="ic" value={inviteCode} onChange={(e) => setInviteCode(e.target.value)} placeholder="Paste invite code" className="min-h-[48px]" />
+                <Input
+                  id="ic"
+                  value={inviteCode}
+                  onChange={(e) => setInviteCode(e.target.value)}
+                  placeholder="Paste invite code"
+                  className="min-h-[48px]"
+                />
               </div>
             )}
             <div className="mt-6 flex items-center justify-between gap-3">
-              <button onClick={() => setStep('security')} className="text-xs text-muted-foreground hover:text-foreground">Continue without a household</button>
+              <button
+                type="button"
+                onClick={() => setStep('security')}
+                className="text-xs text-muted-foreground hover:text-foreground"
+              >
+                Continue without a household
+              </button>
               <Button onClick={finishFamily} disabled={busy} className="min-h-[44px] gap-2">
                 {busy && <Loader2 className="h-4 w-4 animate-spin" />} Continue
               </Button>
@@ -228,8 +324,19 @@ export default function Onboarding() {
                 { v: 'high_privacy', t: 'High-Privacy', d: 'Mask financial numbers by default; tighter auto-lock.' },
                 { v: 'max_vault', t: 'Maximum Vault Isolation', d: 'Strongest isolation; vault access re-auth required.' },
               ].map((o) => (
-                <button key={o.v} onClick={() => setTier(o.v)} className={`flex w-full items-start gap-3 rounded-xl border p-4 text-left ${tier === o.v ? 'border-brand bg-brand/5' : 'border-border/70'}`}>
-                  <span className={`mt-0.5 flex h-4 w-4 items-center justify-center rounded-full border ${tier === o.v ? 'border-brand' : 'border-muted-foreground'}`}>
+                <button
+                  key={o.v}
+                  type="button"
+                  onClick={() => setTier(o.v)}
+                  className={`flex w-full items-start gap-3 rounded-xl border p-4 text-left ${
+                    tier === o.v ? 'border-brand bg-brand/5' : 'border-border/70'
+                  }`}
+                >
+                  <span
+                    className={`mt-0.5 flex h-4 w-4 items-center justify-center rounded-full border ${
+                      tier === o.v ? 'border-brand' : 'border-muted-foreground'
+                    }`}
+                  >
                     {tier === o.v && <span className="h-2 w-2 rounded-full bg-brand" />}
                   </span>
                   <span>
@@ -242,7 +349,9 @@ export default function Onboarding() {
             <div className="mt-5 max-w-xs space-y-1.5">
               <Label htmlFor="al">Auto-lock timeout</Label>
               <Select value={autoLock} onValueChange={setAutoLock}>
-                <SelectTrigger id="al" className="min-h-[44px]"><SelectValue /></SelectTrigger>
+                <SelectTrigger id="al" className="min-h-[44px]">
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="5">5 minutes</SelectItem>
                   <SelectItem value="15">15 minutes</SelectItem>
@@ -280,20 +389,43 @@ export default function Onboarding() {
                   <Label htmlFor="sk">Secret key</Label>
                   <div className="flex gap-2">
                     <Input id="sk" readOnly value={secret} className="font-mono text-xs" />
-                    <Button type="button" variant="outline" size="icon" onClick={() => { navigator.clipboard?.writeText(secret); toast({ title: 'Secret copied' }); }} aria-label="Copy secret">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={() => {
+                        navigator.clipboard?.writeText(secret);
+                        toast({ title: 'Secret copied' });
+                      }}
+                      aria-label="Copy secret"
+                    >
                       <Copy className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
                 <div>
                   <Label htmlFor="tc">Enter the 6-digit code from your app</Label>
-                  <Input id="tc" inputMode="numeric" maxLength={6} value={testCode} onChange={(e) => setTestCode(e.target.value.replace(/\D/g, ''))} className="min-h-[48px] tracking-[0.4em] text-center" />
+                  <Input
+                    id="tc"
+                    inputMode="numeric"
+                    maxLength={6}
+                    value={testCode}
+                    onChange={(e) => setTestCode(e.target.value.replace(/\D/g, ''))}
+                    className="min-h-[48px] tracking-[0.4em] text-center"
+                  />
                   {err && <p className="mt-1 text-sm text-red-600">{err}</p>}
                 </div>
               </div>
             </div>
             <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
-              <button onClick={remindLater} disabled={busy} className="text-xs text-muted-foreground hover:text-foreground">Remind me later</button>
+              <button
+                type="button"
+                onClick={remindLater}
+                disabled={busy}
+                className="text-xs text-muted-foreground hover:text-foreground"
+              >
+                Remind me later
+              </button>
               <Button onClick={verifyTestCode} disabled={busy} className="min-h-[44px] gap-2">
                 {busy && <Loader2 className="h-4 w-4 animate-spin" />} Verify & complete
               </Button>
@@ -307,9 +439,13 @@ export default function Onboarding() {
               <ShieldCheck className="h-5 w-5 text-emerald-600" />
               <h2 className="font-heading text-lg font-semibold text-foreground">Save your backup codes</h2>
             </div>
-            <p className="mt-1 text-sm text-muted-foreground">If you lose your phone, use one of these one-time codes to regain access. Store them somewhere safe — they won't be shown again.</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              If you lose your phone, use one of these one-time codes to regain access. Store them somewhere safe — they won't be shown again.
+            </p>
             <div className="mt-4 grid grid-cols-2 gap-2 rounded-xl bg-muted/50 p-4 font-mono text-sm text-foreground">
-              {backupCodes.map((c) => <span key={c}>{c}</span>)}
+              {backupCodes.map((c) => (
+                <span key={c}>{c}</span>
+              ))}
             </div>
             <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
               <Button variant="outline" onClick={downloadBackup} className="min-h-[44px] gap-2">

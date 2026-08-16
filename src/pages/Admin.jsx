@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
+import { supabase } from '@/lib/supabaseClient';
+import { entities } from '@/lib/entities';
 import ModuleHeader from '@/components/ModuleHeader';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
@@ -27,23 +28,52 @@ export default function Admin() {
   useEffect(() => {
     (async () => {
       try {
-        const u = await base44.auth.me();
-        if (u.role !== 'admin') { setUser(u); setView('denied'); return; }
-        setUser(u);
-        const list = await base44.entities.AdminSecurity.list();
+        const { data: { user: currentUser }, error } = await supabase.auth.getUser();
+        if (error || !currentUser) {
+          navigate('/admin-login');
+          return;
+        }
+
+        const isAdmin =
+          currentUser.role === 'admin' ||
+          currentUser.app_metadata?.role === 'admin' ||
+          currentUser.user_metadata?.role === 'admin';
+
+        if (!isAdmin) {
+          setUser(currentUser);
+          setView('denied');
+          return;
+        }
+
+        setUser(currentUser);
+        const list = await entities.AdminSecurity.list();
         let s = list?.[0];
         if (!s) {
-          s = await base44.entities.AdminSecurity.create({ must_change_password: true, mfa_enforced: false, password_hash: '', password_salt: '' });
+          s = await entities.AdminSecurity.create({
+            must_change_password: true,
+            mfa_enforced: false,
+            password_hash: '',
+            password_salt: '',
+          });
         }
         setSecurity(s);
-        if (s.must_change_password || !s.password_hash) { navigate('/admin-change-password'); return; }
+
+        if (s.must_change_password || !s.password_hash) {
+          navigate('/admin-change-password');
+          return;
+        }
+
         if (sessionStorage.getItem('lp-admin-pass-ok') === 'true') {
-          if (s.mfa_enforced && sessionStorage.getItem('lp-admin-mfa-ok') !== 'true') setView('mfa');
-          else setView('ready');
+          if (s.mfa_enforced && sessionStorage.getItem('lp-admin-mfa-ok') !== 'true') {
+            setView('mfa');
+          } else {
+            setView('ready');
+          }
         } else {
           setView('passphrase');
         }
-      } catch {
+      } catch (err) {
+        console.error('[Admin.init]', err);
         navigate('/admin-login');
       }
     })();
@@ -51,22 +81,37 @@ export default function Admin() {
 
   const logAudit = async (message, severity = 'info') => {
     try {
-      const me = await base44.auth.me();
-      await base44.entities.AuditLog.create({ event_type: 'access', message, actor: me?.email || 'admin', severity });
-    } catch {}
+      const { data: { user: me } } = await supabase.auth.getUser();
+      await entities.AuditLog.create({
+        event_type: 'access',
+        message,
+        actor: me?.email || 'admin',
+        severity,
+      });
+    } catch (err) {
+      console.error('[Admin.logAudit]', err);
+    }
   };
 
   const verifyPass = async (e) => {
     e.preventDefault();
-    setBusy(true); setErr('');
+    setBusy(true);
+    setErr('');
     try {
-      const ok = await verifyPassword(pass, security.password_salt, security.password_hash);
-      if (!ok) { setErr('Incorrect admin passphrase.'); setBusy(false); return; }
+      const ok = await verifyPassword(pass, security?.password_salt, security?.password_hash);
+      if (!ok) {
+        setErr('Incorrect admin passphrase.');
+        setBusy(false);
+        return;
+      }
       sessionStorage.setItem('lp-admin-pass-ok', 'true');
       setPass('');
       await logAudit('System admin passphrase verified', 'info');
-      if (security.mfa_enforced && sessionStorage.getItem('lp-admin-mfa-ok') !== 'true') setView('mfa');
-      else setView('ready');
+      if (security?.mfa_enforced && sessionStorage.getItem('lp-admin-mfa-ok') !== 'true') {
+        setView('mfa');
+      } else {
+        setView('ready');
+      }
     } catch {
       setErr('Verification failed.');
     } finally {
@@ -76,8 +121,13 @@ export default function Admin() {
 
   const verifyMfa = async (e) => {
     e.preventDefault();
-    setBusy(true); setErr('');
-    if (!/^\d{6}$/.test(code)) { setErr('Enter the 6-digit code.'); setBusy(false); return; }
+    setBusy(true);
+    setErr('');
+    if (!/^\d{6}$/.test(code)) {
+      setErr('Enter the 6-digit code.');
+      setBusy(false);
+      return;
+    }
     sessionStorage.setItem('lp-admin-mfa-ok', 'true');
     setCode('');
     await logAudit('MFA verification successful', 'info');
@@ -111,7 +161,9 @@ export default function Admin() {
       <div className="flex min-h-screen items-center justify-center bg-background px-4">
         <div className="w-full max-w-sm rounded-2xl border border-border/70 bg-card p-6">
           <div className="flex items-center gap-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand/10 text-brand"><KeyRound className="h-5 w-5" /></div>
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand/10 text-brand">
+              <KeyRound className="h-5 w-5" />
+            </div>
             <div>
               <h1 className="font-heading text-lg font-semibold text-foreground">System admin passphrase</h1>
               <p className="text-xs text-muted-foreground">Enter your admin passphrase to continue</p>
@@ -120,7 +172,15 @@ export default function Admin() {
           <form onSubmit={verifyPass} className="mt-5 space-y-4">
             <div className="space-y-1.5">
               <Label htmlFor="pa">Passphrase</Label>
-              <Input id="pa" type="password" value={pass} onChange={(e) => setPass(e.target.value)} className="min-h-[48px]" autoFocus required />
+              <Input
+                id="pa"
+                type="password"
+                value={pass}
+                onChange={(e) => setPass(e.target.value)}
+                className="min-h-[48px]"
+                autoFocus
+                required
+              />
             </div>
             {err && <p className="text-sm text-red-600">{err}</p>}
             <Button type="submit" disabled={busy} className="min-h-[48px] w-full gap-2">
@@ -137,7 +197,9 @@ export default function Admin() {
       <div className="flex min-h-screen items-center justify-center bg-background px-4">
         <div className="w-full max-w-sm rounded-2xl border border-border/70 bg-card p-6">
           <div className="flex items-center gap-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand/10 text-brand"><Lock className="h-5 w-5" /></div>
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand/10 text-brand">
+              <Lock className="h-5 w-5" />
+            </div>
             <div>
               <h1 className="font-heading text-lg font-semibold text-foreground">MFA verification</h1>
               <p className="text-xs text-muted-foreground">Enter the 6-digit code from your authenticator</p>
@@ -146,7 +208,16 @@ export default function Admin() {
           <form onSubmit={verifyMfa} className="mt-5 space-y-4">
             <div className="space-y-1.5">
               <Label htmlFor="co">6-digit code</Label>
-              <Input id="co" inputMode="numeric" maxLength={6} value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))} className="min-h-[48px] tracking-[0.5em] text-center" autoFocus required />
+              <Input
+                id="co"
+                inputMode="numeric"
+                maxLength={6}
+                value={code}
+                onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
+                className="min-h-[48px] tracking-[0.5em] text-center"
+                autoFocus
+                required
+              />
             </div>
             {err && <p className="text-sm text-red-600">{err}</p>}
             <Button type="submit" disabled={busy} className="min-h-[48px] w-full gap-2">

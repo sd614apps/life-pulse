@@ -10,7 +10,7 @@ import { Home } from 'lucide-react';
 export default function Family() {
   return (
     <div className="min-h-screen bg-background">
-      <ModuleHeader icon={Home} title="Family Hub" description="Shared calendar, roles, tasks & emergency contacts" cover="https://media.base44.com/images/public/6a737f97d9e3ddd06cf02735/f643c4574_generated_image.png" />
+      <ModuleHeader icon={Home} title="Family Hub" description="Shared calendar, roles, tasks & emergency contacts" cover="/images/family-tile-cover.png" />
       <main className="mx-auto max-w-7xl px-4 py-6 pb-28 sm:px-6 lg:px-8">
         <Tabs defaultValue="calendar">
           <TabsList className="flex-wrap">
