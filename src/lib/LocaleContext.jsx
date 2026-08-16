@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { base44 } from '@/api/base44Client';
+import { supabase } from '@/lib/supabaseClient';
 import { useAccessibility } from '@/lib/AccessibilityContext';
 import { differenceInCalendarDays, parseISO } from 'date-fns';
 
@@ -15,7 +15,7 @@ const COUNTRY_CURRENCY = {
 const IMPERIAL_COUNTRIES = ['US', 'LR', 'MM'];
 
 function detect() {
-  const lang = navigator.language || 'en-US';
+  const lang = (typeof navigator !== 'undefined' && navigator.language) || 'en-US';
   const region = (lang.split('-')[1] || 'US').toUpperCase();
   return {
     locale: lang,
@@ -42,19 +42,41 @@ export function LocaleProvider({ children }) {
 
   useEffect(() => {
     let mounted = true;
-    base44.auth.me().then((u) => {
-      if (u?.data?.region_prefs && mounted) {
-        setSettings((prev) => ({ ...prev, ...u.data.region_prefs }));
+
+    const loadUserPreferences = async () => {
+      try {
+        const { data: { user }, error } = await supabase.auth.getUser();
+        if (error || !user) return;
+
+        const regionPrefs = user.user_metadata?.region_prefs;
+        if (regionPrefs && mounted) {
+          setSettings((prev) => ({ ...prev, ...regionPrefs }));
+        }
+      } catch (err) {
+        console.error('[LocaleProvider.getUser]', err);
       }
-    }).catch(() => {});
-    return () => { mounted = false; };
+    };
+
+    loadUserPreferences();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const saveSettings = useCallback((partial) => {
     setSettings((prev) => {
       const next = { ...prev, ...partial };
-      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); } catch {}
-      base44.auth.updateMe({ data: { region_prefs: next } }).catch(() => {});
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      } catch {}
+
+      supabase.auth.updateUser({
+        data: { region_prefs: next },
+      }).catch((err) => {
+        console.error('[LocaleProvider.updateUser]', err);
+      });
+
       return next;
     });
   }, []);
@@ -127,11 +149,20 @@ export function LocaleProvider({ children }) {
   }, [settings.unitSystem]);
 
   const value = {
-    settings, saveSettings,
-    locale, currency,
-    formatCurrency, formatNumber, formatDate, formatTime, formatDue,
-    formatWeight, formatTemperature, formatDistance,
+    settings,
+    saveSettings,
+    locale,
+    currency,
+    formatCurrency,
+    formatNumber,
+    formatDate,
+    formatTime,
+    formatDue,
+    formatWeight,
+    formatTemperature,
+    formatDistance,
   };
+
   return <LocaleContext.Provider value={value}>{children}</LocaleContext.Provider>;
 }
 

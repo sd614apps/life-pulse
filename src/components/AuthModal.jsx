@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { useAccessibility } from '@/lib/AccessibilityContext';
+import { entities } from '@/lib/entities';
 
 const PASSKEY_STATE = { idle: 'idle', pending: 'pending', ok: 'ok' };
 
@@ -21,24 +22,6 @@ export default function AuthModal({ open, onOpenChange }) {
   const [code, setCode] = useState('');
   const [verifying, setVerifying] = useState(false);
 
-  useEffect(() => {
-    if (!open) return;
-    let active = true;
-    setLoadingProfiles(true);
-    import('@/api/base44Client').then(({ base44 }) =>
-      base44.entities.Profile.list().then((items) => {
-        if (!active) return;
-        setProfiles(items || []);
-        if (items && items.length) selectProfile(items[0]);
-        setLoadingProfiles(false);
-      }).catch(() => {
-        if (active) setLoadingProfiles(false);
-      })
-    );
-    return () => { active = false; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
-
   const selectProfile = (p) => {
     setSelectedId(p.id);
     setEmail(p.email || '');
@@ -47,6 +30,29 @@ export default function AuthModal({ open, onOpenChange }) {
     // Elderly simplified view automatically enables large text for the demo
     if (p.view_mode === 'simplified') setLargeText(true);
   };
+
+  useEffect(() => {
+    if (!open) return;
+    let active = true;
+    setLoadingProfiles(true);
+
+    entities.Profile.list()
+      .then((items) => {
+        if (!active) return;
+        setProfiles(items || []);
+        if (items && items.length) selectProfile(items[0]);
+        setLoadingProfiles(false);
+      })
+      .catch((err) => {
+        console.error('[AuthModal.Profile.list]', err);
+        if (active) setLoadingProfiles(false);
+      });
+
+    return () => {
+      active = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   const reset = () => {
     setStep('credentials');
@@ -135,8 +141,12 @@ export default function AuthModal({ open, onOpenChange }) {
                         {p.display_name?.charAt(0)}
                       </div>
                       <div className="min-w-0">
-                        <div className="truncate text-sm font-semibold text-foreground">{p.tier_label || p.display_name}</div>
-                        <div className="truncate text-xs text-muted-foreground">{p.age_band} · {p.view_mode} view</div>
+                        <div className="truncate text-sm font-semibold text-foreground">
+                          {p.tier_label || p.display_name}
+                        </div>
+                        <div className="truncate text-xs text-muted-foreground">
+                          {p.age_band} · {p.view_mode} view
+                        </div>
                       </div>
                       {selectedId === p.id && <CheckCircle2 className="ml-auto h-5 w-5 text-brand" />}
                     </button>
@@ -175,7 +185,10 @@ export default function AuthModal({ open, onOpenChange }) {
                     </div>
                   </div>
 
-                  <Button type="submit" className="min-h-[48px] w-full gap-2 bg-brand text-brand-foreground hover:bg-brand/90">
+                  <Button
+                    type="submit"
+                    className="min-h-[48px] w-full gap-2 bg-brand text-brand-foreground hover:bg-brand/90"
+                  >
                     Continue
                     <ArrowRight className="h-4 w-4" />
                   </Button>
@@ -272,7 +285,9 @@ export default function AuthModal({ open, onOpenChange }) {
                   Continue to your secure dashboard.
                 </p>
                 <Button
-                  onClick={() => { window.location.href = '/login'; }}
+                  onClick={() => {
+                    window.location.href = '/login';
+                  }}
                   className="mt-6 min-h-[48px] w-full gap-2 bg-brand text-brand-foreground hover:bg-brand/90"
                 >
                   Open secure dashboard

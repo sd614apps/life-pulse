@@ -28,7 +28,6 @@ import { TripEvent } from './TripEvent';
 import { User } from './User';
 import { VaultItem } from './VaultItem';
 
-// Unified Base44-compatible entities object
 export const entities = {
   AdminSecurity,
   AppConfiguration,

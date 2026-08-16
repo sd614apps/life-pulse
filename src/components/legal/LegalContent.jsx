@@ -33,7 +33,7 @@ export function TermsContent() {
       </section>
       <section>
         <h2 className="font-heading text-base font-semibold text-foreground">8. Contact</h2>
-        <p>For questions about these Terms, contact Base44 support.</p>
+        <p>For questions about these Terms, contact LifePulse support.</p>
       </section>
     </div>
   );
@@ -72,7 +72,7 @@ export function PrivacyContent() {
       </section>
       <section>
         <h2 className="font-heading text-base font-semibold text-foreground">8. Contact</h2>
-        <p>For privacy questions, contact Base44 support.</p>
+        <p>For privacy questions, contact LifePulse support.</p>
       </section>
     </div>
   );
