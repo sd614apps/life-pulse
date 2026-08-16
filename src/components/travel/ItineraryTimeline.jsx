@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { entities } from '@/lib/entities';
 import { format, parseISO } from 'date-fns';
 import { Plane, Hotel, MapPin, Bus, Ticket } from 'lucide-react';
 
@@ -13,8 +13,16 @@ const TYPE_META = {
 
 export default function ItineraryTimeline({ tripId }) {
   const [events, setEvents] = useState([]);
+
   useEffect(() => {
-    base44.entities.TripEvent.filter({ trip_id: tripId })
+    if (!tripId) {
+      setEvents([]);
+      return;
+    }
+
+    entities.TripEvent.list({
+      filter: { trip_id: tripId },
+    })
       .then((list) => {
         setEvents(
           (list || []).sort(
@@ -24,7 +32,10 @@ export default function ItineraryTimeline({ tripId }) {
           )
         );
       })
-      .catch(() => setEvents([]));
+      .catch((err) => {
+        console.error('[ItineraryTimeline.TripEvent]', err);
+        setEvents([]);
+      });
   }, [tripId]);
 
   return (
@@ -48,10 +59,12 @@ export default function ItineraryTimeline({ tripId }) {
                 <div className="flex-1 pb-4">
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="text-sm font-semibold text-foreground">{e.title}</p>
-                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${meta.color}`}>{meta.label}</span>
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${meta.color}`}>
+                      {meta.label}
+                    </span>
                   </div>
                   <p className="mt-0.5 text-xs text-muted-foreground">
-                    {format(parseISO(e.event_date), 'EEE d MMM')}
+                    {e.event_date ? format(parseISO(e.event_date), 'EEE d MMM') : '—'}
                     {e.event_time ? ` · ${e.event_time}` : ''}
                     {e.location ? ` · ${e.location}` : ''}
                   </p>

@@ -1,14 +1,22 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
+import { entities } from '@/lib/entities';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import TripCard from './TripCard';
 
 export default function TripDashboard() {
   const navigate = useNavigate();
   const [trips, setTrips] = useState([]);
+
   useEffect(() => {
-    base44.entities.Trip.list('start_date').then((list) => setTrips(list || [])).catch(() => setTrips([]));
+    entities.Trip.list({
+      orderBy: 'start_date:asc',
+    })
+      .then((list) => setTrips(list || []))
+      .catch((err) => {
+        console.error('[TripDashboard.Trip]', err);
+        setTrips([]);
+      });
   }, []);
 
   const upcoming = trips.filter((t) => t.status === 'upcoming');
@@ -31,13 +39,25 @@ export default function TripDashboard() {
       <h3 className="text-sm font-semibold text-foreground">Trips</h3>
       <Tabs defaultValue="upcoming" className="mt-3 w-full">
         <TabsList className="grid w-full max-w-md grid-cols-3">
-          <TabsTrigger value="upcoming" className="min-h-[44px]">Upcoming ({upcoming.length})</TabsTrigger>
-          <TabsTrigger value="past" className="min-h-[44px]">Past ({past.length})</TabsTrigger>
-          <TabsTrigger value="bucket_list" className="min-h-[44px]">Bucket ({bucket.length})</TabsTrigger>
+          <TabsTrigger value="upcoming" className="min-h-[44px]">
+            Upcoming ({upcoming.length})
+          </TabsTrigger>
+          <TabsTrigger value="past" className="min-h-[44px]">
+            Past ({past.length})
+          </TabsTrigger>
+          <TabsTrigger value="bucket_list" className="min-h-[44px]">
+            Bucket ({bucket.length})
+          </TabsTrigger>
         </TabsList>
-        <TabsContent value="upcoming"><Grid trips={upcoming} empty="No upcoming trips planned." /></TabsContent>
-        <TabsContent value="past"><Grid trips={past} empty="No past trips yet." /></TabsContent>
-        <TabsContent value="bucket_list"><Grid trips={bucket} empty="Your bucket list is empty." /></TabsContent>
+        <TabsContent value="upcoming">
+          <Grid trips={upcoming} empty="No upcoming trips planned." />
+        </TabsContent>
+        <TabsContent value="past">
+          <Grid trips={past} empty="No past trips yet." />
+        </TabsContent>
+        <TabsContent value="bucket_list">
+          <Grid trips={bucket} empty="Your bucket list is empty." />
+        </TabsContent>
       </Tabs>
     </div>
   );

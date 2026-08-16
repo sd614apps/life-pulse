@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { entities } from '@/lib/entities';
 import { useToast } from '@/components/ui/use-toast';
 import { formatDistanceToNow, parseISO } from 'date-fns';
 import { Smartphone, Monitor, Tablet, Ban } from 'lucide-react';
@@ -14,19 +14,28 @@ export default function SessionTable() {
 
   const load = async () => {
     try {
-      setRows((await base44.entities.SessionLog.list('-last_active_at', 50)) || []);
-    } catch {
+      const list = await entities.SessionLog.list({
+        orderBy: 'last_active_at:desc',
+        limit: 50,
+      });
+      setRows(list || []);
+    } catch (err) {
+      console.error('[SessionTable.load]', err);
       setRows([]);
     }
   };
-  useEffect(() => { load(); }, []);
+
+  useEffect(() => {
+    load();
+  }, []);
 
   const revoke = async (row) => {
     setRows((prev) => prev.map((r) => (r.id === row.id ? { ...r, status: 'revoked' } : r)));
     try {
-      await base44.entities.SessionLog.update(row.id, { status: 'revoked' });
+      await entities.SessionLog.update(row.id, { status: 'revoked' });
       toast({ title: 'Session revoked' });
-    } catch {
+    } catch (err) {
+      console.error('[SessionTable.revoke]', err);
       toast({ title: 'Revoke failed', variant: 'destructive' });
       load();
     }
@@ -48,7 +57,11 @@ export default function SessionTable() {
           </thead>
           <tbody>
             {rows.length === 0 && (
-              <tr><td colSpan={5} className="py-6 text-center text-muted-foreground">No sessions recorded.</td></tr>
+              <tr>
+                <td colSpan={5} className="py-6 text-center text-muted-foreground">
+                  No sessions recorded.
+                </td>
+              </tr>
             )}
             {rows.map((r) => {
               const Icon = deviceIcon(r.device_type);
@@ -61,15 +74,30 @@ export default function SessionTable() {
                     </div>
                   </td>
                   <td className="py-2.5 pr-3 text-muted-foreground">{r.location}</td>
-                  <td className="py-2.5 pr-3 text-muted-foreground">{formatDistanceToNow(parseISO(r.last_active_at), { addSuffix: true })}</td>
+                  <td className="py-2.5 pr-3 text-muted-foreground">
+                    {r.last_active_at
+                      ? formatDistanceToNow(parseISO(r.last_active_at), { addSuffix: true })
+                      : '—'}
+                  </td>
                   <td className="py-2.5 pr-3">
-                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${r.status === 'active' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-muted text-muted-foreground'}`}>
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                        r.status === 'active'
+                          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                          : 'bg-muted text-muted-foreground'
+                      }`}
+                    >
                       {r.status}
                     </span>
                   </td>
                   <td className="py-2.5 pr-3 text-right">
                     {r.status === 'active' && (
-                      <Button variant="outline" size="sm" onClick={() => revoke(r)} className="gap-1.5">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => revoke(r)}
+                        className="gap-1.5"
+                      >
                         <Ban className="h-3.5 w-3.5" /> Revoke
                       </Button>
                     )}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { base44 } from '@/api/base44Client';
+import { entities } from '@/lib/entities';
 import { useToast } from '@/components/ui/use-toast';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
@@ -7,18 +7,19 @@ import { Fingerprint, KeyRound, Lock, Clock } from 'lucide-react';
 
 export default function SecurityControls({ settings, reload }) {
   const { toast } = useToast();
-  const bool = (k) => settings[k]?.config_value === 'true';
+  const bool = (k) => settings?.[k]?.config_value === 'true';
 
   const update = async (key, value) => {
-    const rec = settings[key];
+    const rec = settings?.[key];
     if (!rec) return;
     try {
-      await base44.entities.AppConfiguration.update(rec.id, { config_value: String(value) });
+      await entities.AppConfiguration.update(rec.id, { config_value: String(value) });
       toast({ title: 'Security setting updated' });
-      reload();
-    } catch {
+      reload?.();
+    } catch (err) {
+      console.error('[SecurityControls.update]', err);
       toast({ title: 'Update failed', variant: 'destructive' });
-      reload();
+      reload?.();
     }
   };
 
@@ -50,8 +51,13 @@ export default function SecurityControls({ settings, reload }) {
       desc: 'Lock the app after inactivity',
       icon: Lock,
       control: (
-        <Select value={settings.auto_lock_timer?.config_value || '5'} onValueChange={(v) => update('auto_lock_timer', v)}>
-          <SelectTrigger className="h-9 w-28"><SelectValue /></SelectTrigger>
+        <Select
+          value={settings?.auto_lock_timer?.config_value || '5'}
+          onValueChange={(v) => update('auto_lock_timer', v)}
+        >
+          <SelectTrigger className="h-9 w-28">
+            <SelectValue />
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value="1">1 min</SelectItem>
             <SelectItem value="5">5 min</SelectItem>

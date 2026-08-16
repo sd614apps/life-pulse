@@ -8,31 +8,31 @@ const FEATURES = [
     icon: HeartPulse,
     title: 'Health',
     desc: 'Track vitals, medications, and appointments for the whole family in one private record.',
-    image: 'https://media.base44.com/images/public/6a737f97d9e3ddd06cf02735/3374a2875_generated_image.png',
+    image: '/images/health-tile-cover.png',
   },
   {
     icon: Wallet,
     title: 'Finances',
     desc: 'Budgets, accounts, and bills — with sensitive balances masked in Privacy Mode.',
-    image: 'https://media.base44.com/images/public/6a737f97d9e3ddd06cf02735/7251f2013_generated_image.png',
+    image: '/images/finances-tile-cover.png',
   },
   {
     icon: TrendingUp,
     title: 'Investments',
     desc: 'Monitor portfolios and holdings with clear, real-time performance snapshots.',
-    image: 'https://media.base44.com/images/public/6a737f97d9e3ddd06cf02735/22ffb0971_generated_image.png',
+    image: '/images/investment-tile-cover.png',
   },
   {
     icon: Plane,
     title: 'Travel',
     desc: 'Itineraries, documents, and reminders so no trip detail slips through the cracks.',
-    image: 'https://media.base44.com/images/public/6a737f97d9e3ddd06cf02735/0b82fa3a2_generated_image.png',
+    image: '/images/travel-tile-cover.png',
   },
   {
     icon: Home,
     title: 'Family',
     desc: 'Share what matters with the right people through tiered, role-based access.',
-    image: 'https://media.base44.com/images/public/6a737f97d9e3ddd06cf02735/f643c4574_generated_image.png',
+    image: '/images/family-tile-cover.png',
   },
 ];
 
@@ -63,7 +63,7 @@ export default function FeatureGrid() {
               src={f.image}
               alt={f.title}
               fittingType="fill"
-              className="absolute inset-0 h-full w-full"
+              className="absolute inset-0 h-full w-full object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/55 to-black/25" />
             <div className="relative flex h-full min-h-[230px] flex-col p-7">
